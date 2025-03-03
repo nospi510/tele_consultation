@@ -1,0 +1,12 @@
+apt install python3 python3-pip python3-venv -y
+
+cd backend 
+
+# Création d’un environnement virtuel
+python3 -m venv .venv
+source .venv/bin/activate  # Activation de L’environnement
+
+# Installation des packages Flask & SQLAlchemy
+
+pip install -r requirements.txt
+
