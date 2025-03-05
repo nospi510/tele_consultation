@@ -23,9 +23,9 @@ def create_app():
         'securityDefinitions': {
             'BearerAuth': {
                 'type': 'apiKey',
-                'name': 'Authorization',  # Nom du header où le token sera envoyé
-                'in': 'header',           # Le token sera dans l'en-tête de la requête
-                'description': 'JWT Bearer token, must be prefixed with `Bearer` (e.g., "Bearer <token>")'  # Ajout du préfixe
+                'name': 'Authorization',  
+                'in': 'header',           
+                'description': 'JWT Bearer token, must be prefixed with `Bearer` (e.g., "Bearer <token>")' 
             }
         },
         'security': [{'BearerAuth': []}],  # Applique ce schéma de sécurité à toutes les routes
