@@ -51,14 +51,24 @@ def register():
         'schema': {
             'type': 'object',
             'properties': {
-                'email': {'type': 'string'},
-                'password': {'type': 'string'}
+                'email': {'type': 'string','example': 'nick@visiotech.me'},
+                'password': {'type': 'string','example': 'passer'}
             }
         }
     }],
     'responses': {
-        '200': {'description': 'Connexion réussie'},
-        '401': {'description': 'Identifiants invalides'}
+        '200': {
+            'description': 'Connexion réussie',
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'access_token': {'type': 'string'}
+                }
+            }
+        },
+        '401': {
+            'description': 'Identifiants invalides'
+        }
     }
 })
 def login():
@@ -67,7 +77,8 @@ def login():
     user = User.query.filter_by(email=data["email"]).first()
 
     if user and check_password_hash(user.password_hash, data["password"]):
-        token = create_access_token(identity=user.id)
+        # Convertir l'ID de l'utilisateur en string
+        token = create_access_token(identity=str(user.id))  # ID converti en string
         return jsonify({"access_token": token}), 200
 
     return jsonify({"error": "Invalid credentials"}), 401

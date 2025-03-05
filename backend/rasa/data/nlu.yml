@@ -1,0 +1,7 @@
+version: "3.0"
+nlu:
+  - intent: describe_symptoms
+    examples: |
+      - J'ai mal à la tête
+      - Je tousse et j'ai de la fièvre
+      - J'ai des douleurs abdominales

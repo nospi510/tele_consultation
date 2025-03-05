@@ -47,3 +47,12 @@ def handle_ivr_choice(digit):
         response.say("Choix invalide. Veuillez réessayer.", voice='woman', language='fr-FR')
 
     return str(response)
+
+def send_whatsapp_message(to, message):
+    """Envoyer un message WhatsApp via Twilio."""
+    message = client.messages.create(
+        body=message,
+        from_='whatsapp:' + twilio_phone_number,
+        to='whatsapp:' + to
+    )
+    return message.sid

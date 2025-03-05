@@ -1,0 +1,10 @@
+version: "3.0"
+intents:
+  - describe_symptoms
+
+responses:
+  utter_acknowledge:
+    - text: "Merci de décrire vos symptômes. Un médecin va vous répondre bientôt."
+
+actions:
+  - action_save_symptoms
