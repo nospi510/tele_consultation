@@ -3,7 +3,7 @@ from app.services.twilio_service import generate_ivr_response, handle_ivr_choice
 
 twilio_bp = Blueprint("twilio", __name__)
 
-@twilio_bp.route("/ivr/welcome", methods=["POST"])
+@twilio_bp.route("/ivr/welcome", methods=["GET","POST"])
 def ivr_welcome():
     """Route pour gérer un appel entrant."""
     return generate_ivr_response()
