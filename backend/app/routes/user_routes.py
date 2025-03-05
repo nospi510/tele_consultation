@@ -90,7 +90,7 @@ def get_users():
 @user_bp.route("/availability", methods=["PUT"])
 @jwt_required() 
 @swag_from({
-    'tags': ['Users'],
+    'tags': ['Doctors'],
     'summary': 'Mettre à jour la disponibilité d’un docteur',
     'parameters': [{
         'name': 'body',
@@ -137,6 +137,50 @@ def update_doctor_availability():
     db.session.commit()
 
     return jsonify({"message": "Disponibilité mise à jour avec succès", "is_available": user.is_available}), 200
+
+@user_bp.route("/create_admin", methods=["POST"])
+@swag_from({
+    'tags': ['Admin'],
+    'summary': 'Créer un utilisateur de type administrateur',
+    'parameters': [{
+        'name': 'body',
+        'in': 'body',
+        'required': True,
+        'schema': {
+            'type': 'object',
+            'properties': {
+                'fullname': {'type': 'string','example':'spino nick'},
+                'email': {'type': 'string','example':'admin@visiotech.me'},
+                'password': {'type': 'string', 'example':'passer'}
+            }
+        }
+    }],
+    'responses': {
+        '201': {'description': 'Administrateur créé avec succès'},
+        '400': {'description': 'Erreur dans la requête'}
+    }
+})
+def create_admin():
+    """Créer un administrateur dans la base de données"""
+    data = request.get_json()
+
+    # Vérification de l'existence de l'email
+    if User.query.filter_by(email=data['email']).first():
+        return jsonify({"error": "Cet email est déjà utilisé"}), 400
+
+    # Créer un nouvel administrateur
+    hashed_password = generate_password_hash(data['password'], method="pbkdf2:sha256")
+    new_admin = User(
+        fullname=data['fullname'],
+        email=data['email'],
+        password_hash=hashed_password,
+        role="admin"  
+    )
+
+    db.session.add(new_admin)
+    db.session.commit()
+
+    return jsonify({"message": "Administrateur créé avec succès", "admin_id": new_admin.id}), 201
 
 
     
