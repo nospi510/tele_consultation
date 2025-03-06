@@ -40,6 +40,7 @@ def create_app():
     from app.routes.twilio_routes import twilio_bp
     from app.routes.chatbot_routes import chatbot_bp
     from app.routes.user_routes import user_bp
+    from app.routes.tnt_routes import tnt_bp
 
 
     # Enregistrement des Blueprints
@@ -48,5 +49,6 @@ def create_app():
     app.register_blueprint(twilio_bp, url_prefix="/api/twilio")
     app.register_blueprint(chatbot_bp, url_prefix="/api/chatbot")
     app.register_blueprint(user_bp, url_prefix="/api/users")
+    app.register_blueprint(tnt_bp, url_prefix="/api/tnt")
 
     return app
