@@ -1,0 +1,56 @@
+<!DOCTYPE html PUBLIC "-//HbbTV//1.1.1//EN" "http://www.hbbtv.org/dtd/HbbTV-1.1.1.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta charset="UTF-8" />
+    <title>Plateforme de Téléconsultation</title>
+    <meta http-equiv="Content-Type" content="application/vnd.hbbtv.xhtml+xml; charset=utf-8" />
+    <link rel="stylesheet" href="assets/styles.css" />
+    <script type="text/javascript" src="scripts/main.js"></script>
+</head>
+<body onload="initApp();">
+    <div>
+        <object type="application/oipfApplicationManager" id="applicationManager"></object>
+    </div>
+
+    <!-- Menu Principal -->
+    <div id="main_menu">
+        <h1>Bienvenue sur la Plateforme de Téléconsultation</h1>
+        <button id="login_button" onclick="showLoginForm()">Se connecter</button>
+        <button id="consultation_button" onclick="showConsultationForm()" style="display:none;">Démarrer une consultation</button>
+        <button id="history_button" onclick="showPastConsultations()" style="display:none;">Mes consultations passées</button>
+        <button id="tips_button" onclick="showHealthTips()" style="display:none;">Conseils de santé</button>
+        <button id="logout_button" onclick="logout()" style="display:none;">Se déconnecter</button>
+    </div>
+
+    <!-- Formulaire de Connexion -->
+    <div id="login_form" style="display:none;">
+        <h2>Connexion</h2>
+        <input type="email" id="login_email" placeholder="Email" />
+        <input type="password" id="login_password" placeholder="Mot de passe" />
+        <button onclick="submitLogin()">Se connecter</button>
+        <button onclick="hideLoginForm()">Retour</button>
+    </div>
+
+    <!-- Formulaire de Consultation -->
+    <div id="consultation_form" style="display:none;">
+        <h2>Démarrer une consultation</h2>
+        <textarea id="symptoms_input" placeholder="Décrivez vos symptômes..."></textarea>
+        <button onclick="submitConsultation()">Soumettre</button>
+        <button onclick="hideConsultationForm()">Retour</button>
+    </div>
+
+    <!-- Historique des Consultations -->
+    <div id="consultations_list" style="display:none;">
+        <h2>Mes consultations passées</h2>
+        <div id="consultations_container"></div>
+        <button onclick="hidePastConsultations()">Retour</button>
+    </div>
+
+    <!-- Conseils de Santé -->
+    <div id="advice_display" style="display:none;">
+        <h2>Conseils de santé</h2>
+        <p id="advice_text"></p>
+        <button onclick="hideHealthTips()">Retour</button>
+    </div>
+</body>
+</html>

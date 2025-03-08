@@ -16,7 +16,7 @@ def create_app():
     db.init_app(app)
     Migrate(app, db)
     jwt.init_app(app)
-    CORS(app)
+    CORS(app, resources={r"/api/*": {"origins": "http://localhost"}})
 
     # Configuration Swagger pour la sécurité Bearer
     app.config['SWAGGER'] = {
