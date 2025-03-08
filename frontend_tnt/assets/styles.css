@@ -1,0 +1,88 @@
+body {
+    background-color: rgba(0, 0, 0, 0.8); /* Fond semi-transparent */
+    color: white;
+    font-family: Arial, sans-serif;
+    width: 1280px;
+    height: 720px;
+    overflow: hidden;
+    padding: 20px;
+}
+
+#main_menu {
+    text-align: center;
+    margin-top: 50px;
+    background-color: rgba(0, 0, 0, 0.6); /* Fond semi-transparent pour le menu */
+    padding: 20px;
+    border-radius: 10px;
+}
+
+h1 {
+    font-size: 36px;
+    margin-bottom: 20px;
+}
+
+button {
+    display: block;
+    width: 300px;
+    height: 50px;
+    margin: 20px auto;
+    font-size: 18px;
+    background-color: #007BFF; /* Bleu vif */
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+button:hover {
+    background-color: #0056b3; /* Bleu plus foncé au survol */
+}
+
+#advice_display {
+    text-align: center;
+    margin-top: 50px;
+    background-color: rgba(0, 0, 0, 0.6); /* Fond semi-transparent pour les conseils */
+    padding: 20px;
+    border-radius: 10px;
+}
+
+#advice_text {
+    font-size: 20px;
+    line-height: 1.6;
+    margin: 20px 0;
+    padding: 10px;
+    background-color: rgba(255, 255, 255, 0.1); /* Fond légèrement clair pour le texte */
+    border-radius: 5px;
+}
+
+#consultations_list {
+    text-align: left;
+    margin-top: 50px;
+    background-color: rgba(0, 0, 0, 0.6); /* Fond semi-transparent pour la liste */
+    padding: 20px;
+    border-radius: 10px;
+    max-height: 500px; /* Hauteur maximale pour la zone de défilement */
+    overflow-y: auto; /* Activer le défilement vertical */
+}
+
+.consultation_item {
+    margin-bottom: 10px;
+    padding: 10px;
+    background-color: rgba(255, 255, 255, 0.1); /* Fond légèrement clair pour chaque consultation */
+    border-radius: 5px;
+}
+
+.consultation_item h3 {
+    margin: 0;
+    font-size: 18px;
+}
+
+.consultation_item p {
+    margin: 5px 0;
+    font-size: 14px;
+}
+
+/* Styles pour les éléments focus */
+button:focus, input:focus, textarea:focus {
+    outline: 2px solid #FFD700; /* Contour doré pour les éléments focus */
+}

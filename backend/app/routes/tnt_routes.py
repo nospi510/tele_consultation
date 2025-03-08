@@ -10,11 +10,11 @@ tnt_bp = Blueprint("tnt", __name__)
     'summary': 'Obtenir des conseils médicaux pour un symptôme',
     'description': 'Permet à la TNT de récupérer des conseils médicaux pour un symptôme spécifique.',
     'parameters': [{
-        'name': 'symptom',
+        'name': 'symptom_id',
         'in': 'query',
         'required': True,
-        'type': 'string',
-        'description': 'Symptôme du patient'
+        'type': 'integer',
+        'description': 'ID du symptôme'
     }],
     'responses': {
         '200': {
@@ -26,18 +26,25 @@ tnt_bp = Blueprint("tnt", __name__)
                 }
             }
         },
-        '400': {'description': 'Symptôme invalide'}
+        '400': {'description': 'ID de symptôme invalide'}
     }
 })
 def get_medical_advice():
-    symptom = request.args.get("symptom")
+    symptom_id = request.args.get("symptom_id", type=int)
 
-    if not symptom:
-        return jsonify({"error": "Symptôme invalide."}), 400
+    if not symptom_id:
+        return jsonify({"error": "ID de symptôme invalide."}), 400
 
-    # Génère un conseil médical avec Llama3
-    advice = get_ai_diagnosis(symptom)
+    # Simuler des symptômes pour l'exemple
+    symptoms = {
+        1: "Fièvre et toux",
+        2: "Maux de tête",
+        3: "Douleurs abdominales"
+    }
+
+    # Récupérer le diagnostic de l'IA
+    diagnosis = get_ai_diagnosis(symptoms.get(symptom_id, "Symptôme inconnu"))
 
     return jsonify({
-        "advice": advice
+        "advice": diagnosis
     }), 200
