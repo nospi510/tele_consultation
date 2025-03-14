@@ -1,56 +1,87 @@
 <!DOCTYPE html PUBLIC "-//HbbTV//1.1.1//EN" "http://www.hbbtv.org/dtd/HbbTV-1.1.1.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
-    <meta charset="UTF-8" />
-    <title>Plateforme de Téléconsultation</title>
     <meta http-equiv="Content-Type" content="application/vnd.hbbtv.xhtml+xml; charset=utf-8" />
+    <title>Dr Santé - Téléconsultation</title>
     <link rel="stylesheet" href="assets/styles.css" />
     <script type="text/javascript" src="scripts/main.js"></script>
 </head>
 <body onload="initApp();">
+    <!-- Gestionnaire HbbTV -->
     <div>
         <object type="application/oipfApplicationManager" id="applicationManager"></object>
     </div>
 
-    <!-- Menu Principal -->
-    <div id="main_menu">
-        <h1>Bienvenue sur la Plateforme de Téléconsultation</h1>
-        <button id="login_button" onclick="showLoginForm()">Se connecter</button>
-        <button id="consultation_button" onclick="showConsultationForm()" style="display:none;">Démarrer une consultation</button>
-        <button id="history_button" onclick="showPastConsultations()" style="display:none;">Mes consultations passées</button>
-        <button id="tips_button" onclick="showHealthTips()" style="display:none;">Conseils de santé</button>
-        <button id="logout_button" onclick="logout()" style="display:none;">Se déconnecter</button>
-    </div>
+    <!-- Conteneur principal -->
+    <div id="app-container">
+        <!-- Colonne gauche : Menu et Infos utilisateur -->
+        <div id="left-panel">
+            <div id="main-menu">
+                <h1>Dr Santé</h1>
+                <button id="login-btn" onclick="showLogin()">Se connecter</button>
+                <div id="nav-buttons" style="display:none;">
+                    <button id="consult-btn" onclick="showConsultation()">Nouvelle consultation</button>
+                    <button id="history-btn" onclick="showHistory()">Mes consultations</button>
+                    <button id="tips-btn" onclick="showTips()">Conseils santé</button>
+                    <button id="logout-btn" onclick="logout()">Se déconnecter</button>
+                </div>
+            </div>
+            <div id="user-info" style="display:none;">
+                <h2>Mon Profil</h2>
+                <p><strong>Nom :</strong> <span id="user-fullname"></span></p>
+                <p><strong>Email :</strong> <span id="user-email"></span></p>
+                <p><strong>Rôle :</strong> <span id="user-role"></span></p>
+            </div>
+        </div>
 
-    <!-- Formulaire de Connexion -->
-    <div id="login_form" style="display:none;">
-        <h2>Connexion</h2>
-        <input type="email" id="login_email" placeholder="Email" />
-        <input type="password" id="login_password" placeholder="Mot de passe" />
-        <button onclick="submitLogin()">Se connecter</button>
-        <button onclick="hideLoginForm()">Retour</button>
-    </div>
+        <!-- Colonne centrale : Vidéo -->
+        <div id="video-panel">
+            <h2>Dr Santé Live</h2>
+            <video id="video-player" width="768" height="576" controls>
+                <source src="assets/video.mp4" type="video/mp4" />
+                Votre téléviseur ne supporte pas la vidéo.
+            </video>
+        </div>
 
-    <!-- Formulaire de Consultation -->
-    <div id="consultation_form" style="display:none;">
-        <h2>Démarrer une consultation</h2>
-        <textarea id="symptoms_input" placeholder="Décrivez vos symptômes..."></textarea>
-        <button onclick="submitConsultation()">Soumettre</button>
-        <button onclick="hideConsultationForm()">Retour</button>
-    </div>
+        <!-- Colonne droite : Contenu dynamique -->
+        <div id="right-panel">
+            <!-- Formulaire de connexion -->
+            <div id="login-form" style="display:none;">
+                <h2>Connexion</h2>
+                <input type="email" id="email-input" placeholder="Email" tabindex="0" />
+                <input type="password" id="password-input" placeholder="Mot de passe" tabindex="0" />
+                <button onclick="submitLogin()" tabindex="0">Se connecter</button>
+                <button onclick="hideLogin()" tabindex="0">Retour</button>
+            </div>
 
-    <!-- Historique des Consultations -->
-    <div id="consultations_list" style="display:none;">
-        <h2>Mes consultations passées</h2>
-        <div id="consultations_container"></div>
-        <button onclick="hidePastConsultations()">Retour</button>
-    </div>
+            <!-- Formulaire de consultation -->
+            <div id="consultation-form" style="display:none;">
+                <h2>Nouvelle Consultation</h2>
+                <textarea id="symptoms-input" placeholder="Décrivez vos symptômes..." tabindex="0"></textarea>
+                <button onclick="submitConsultation()" tabindex="0">Envoyer</button>
+                <button onclick="hideConsultation()" tabindex="0">Retour</button>
+            </div>
 
-    <!-- Conseils de Santé -->
-    <div id="advice_display" style="display:none;">
-        <h2>Conseils de santé</h2>
-        <p id="advice_text"></p>
-        <button onclick="hideHealthTips()">Retour</button>
+            <!-- Historique des consultations -->
+            <div id="history-view" style="display:none;">
+                <h2>Mes Consultations</h2>
+                <div id="history-content"></div>
+                <button onclick="hideHistory()" tabindex="0">Retour</button>
+            </div>
+
+            <!-- Conseils de santé -->
+            <div id="tips-view" style="display:none;">
+                <h2>Conseils Santé</h2>
+                <p id="tips-content"></p>
+                <button onclick="hideTips()" tabindex="0">Retour</button>
+            </div>
+
+            <!-- Message de bienvenue par défaut -->
+            <div id="welcome-message">
+                <h2>Bienvenue sur Dr Santé</h2>
+                <p>Connectez-vous pour accéder à vos services de téléconsultation.</p>
+            </div>
+        </div>
     </div>
 </body>
 </html>

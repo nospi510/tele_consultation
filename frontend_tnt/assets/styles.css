@@ -1,88 +1,164 @@
 body {
-    background-color: rgba(0, 0, 0, 0.8); /* Fond semi-transparent */
-    color: white;
-    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    background: linear-gradient(135deg, #e6f0fa, #b3d9ff);
+    color: #333;
     width: 1280px;
     height: 720px;
     overflow: hidden;
-    padding: 20px;
 }
 
-#main_menu {
+#app-container {
+    display: flex;
+    width: 1280px;
+    height: 720px;
+}
+
+/* Colonne gauche */
+#left-panel {
+    width: 256px;
+    height: 720px;
+    background-color: #ffffff;
+    box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+    padding: 20px;
+    box-sizing: border-box;
+    overflow-y: auto; /* Ajouté pour éviter débordement */
+}
+
+#main-menu h1, #user-info h2 {
+    font-size: 24px;
+    color: #007bff;
+    margin: 0 0 20px 0;
     text-align: center;
-    margin-top: 50px;
-    background-color: rgba(0, 0, 0, 0.6); /* Fond semi-transparent pour le menu */
-    padding: 20px;
-    border-radius: 10px;
 }
 
-h1 {
-    font-size: 36px;
+#user-info p {
+    font-size: 16px;
+    margin: 10px 0;
+    color: #555;
+}
+
+#user-info span {
+    font-weight: bold;
+    color: #007bff;
+}
+
+#nav-buttons button {
+    margin: 5px 0; /* Espacement réduit pour mieux s'intégrer */
+}
+
+/* Colonne centrale */
+#video-panel {
+    width: 768px;
+    height: 720px;
+    background-color: #f0f4f8;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
+    box-sizing: border-box;
+}
+
+#video-panel h2 {
+    font-size: 28px;
+    color: #007bff;
     margin-bottom: 20px;
 }
 
+#video-player {
+    width: 768px;
+    height: 576px;
+    border-radius: 10px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+/* Colonne droite */
+#right-panel {
+    width: 256px;
+    height: 720px;
+    background-color: #ffffff;
+    padding: 20px;
+    box-sizing: border-box;
+    overflow-y: auto;
+}
+
+#right-panel h2 {
+    font-size: 22px;
+    color: #007bff;
+    margin: 0 0 20px 0;
+    text-align: center;
+}
+
 button {
-    display: block;
-    width: 300px;
-    height: 50px;
-    margin: 20px auto;
-    font-size: 18px;
-    background-color: #007BFF; /* Bleu vif */
-    color: white;
+    width: 100%;
+    padding: 12px;
+    font-size: 16px;
+    background-color: #007bff;
+    color: #fff;
     border: none;
     border-radius: 5px;
+    margin: 10px 0;
     cursor: pointer;
+    transition: background-color 0.3s;
 }
 
-button:hover {
-    background-color: #0056b3; /* Bleu plus foncé au survol */
+button:hover, button:focus {
+    background-color: #0056b3;
+    outline: none;
 }
 
-#advice_display {
-    text-align: center;
-    margin-top: 50px;
-    background-color: rgba(0, 0, 0, 0.6); /* Fond semi-transparent pour les conseils */
-    padding: 20px;
-    border-radius: 10px;
-}
-
-#advice_text {
-    font-size: 20px;
-    line-height: 1.6;
-    margin: 20px 0;
+input, textarea {
+    width: 100%;
     padding: 10px;
-    background-color: rgba(255, 255, 255, 0.1); /* Fond légèrement clair pour le texte */
+    margin: 10px 0;
+    font-size: 16px;
+    background-color: #f0f4f8;
+    color: #333;
+    border: 1px solid #ccc;
     border-radius: 5px;
+    box-sizing: border-box;
 }
 
-#consultations_list {
-    text-align: left;
-    margin-top: 50px;
-    background-color: rgba(0, 0, 0, 0.6); /* Fond semi-transparent pour la liste */
-    padding: 20px;
-    border-radius: 10px;
-    max-height: 500px; /* Hauteur maximale pour la zone de défilement */
-    overflow-y: auto; /* Activer le défilement vertical */
+input:focus, textarea:focus {
+    border-color: #007bff;
+    background-color: #fff;
+    outline: none;
 }
 
-.consultation_item {
-    margin-bottom: 10px;
-    padding: 10px;
-    background-color: rgba(255, 255, 255, 0.1); /* Fond légèrement clair pour chaque consultation */
-    border-radius: 5px;
+textarea {
+    height: 120px;
+    resize: none;
 }
 
-.consultation_item h3 {
-    margin: 0;
-    font-size: 18px;
+/* Stylisation des consultations */
+#history-content .consultation-card {
+    background-color: #f9f9f9;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 15px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
 }
 
-.consultation_item p {
+#history-content .consultation-card p {
     margin: 5px 0;
     font-size: 14px;
+    color: #555;
 }
 
-/* Styles pour les éléments focus */
-button:focus, input:focus, textarea:focus {
-    outline: 2px solid #FFD700; /* Contour doré pour les éléments focus */
+#history-content .consultation-card p strong {
+    color: #007bff;
+}
+
+#tips-content {
+    font-size: 16px;
+    color: #555;
+    line-height: 1.5;
+}
+
+#welcome-message p {
+    font-size: 16px;
+    color: #666;
+    text-align: center;
 }

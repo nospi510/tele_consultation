@@ -182,5 +182,40 @@ def create_admin():
 
     return jsonify({"message": "Administrateur créé avec succès", "admin_id": new_admin.id}), 201
 
+@user_bp.route("/me", methods=["GET"])
+@jwt_required()
+@swag_from({
+    'tags': ['Users'],
+    'summary': 'Récupérer les informations de l’utilisateur connecté',
+    'security': [{'BearerAuth': []}],
+    'responses': {
+        '200': {
+            'description': 'Informations de l’utilisateur',
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'id': {'type': 'integer'},
+                    'fullname': {'type': 'string'},
+                    'email': {'type': 'string'},
+                    'role': {'type': 'string'}
+                }
+            }
+        },
+        '401': {'description': 'Non autorisé'}
+    }
+})
+def get_current_user():
+    """Récupérer les informations de l’utilisateur connecté"""
+    user_id = get_jwt_identity()
+    user = User.query.get(user_id)
 
+    if not user:
+        return jsonify({"error": "Utilisateur non trouvé"}), 404
+
+    return jsonify({
+        'id': user.id,
+        'fullname': user.fullname,
+        'email': user.email,
+        'role': user.role
+    }), 200
     
