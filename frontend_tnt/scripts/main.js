@@ -1,224 +1,244 @@
+let userData = null;
+
 function initApp() {
-  // Acquire the Application object
-  var appManager = document.getElementById('applicationManager');
-  var appObject = appManager.getOwnerApplication(document);
-  if (appObject !== null) {
-      appObject.show();
-  }
+    try {
+        const appManager = document.getElementById("applicationManager");
+        const app = appManager.getOwnerApplication(document);
+        app.show();
+        app.activate();
+    } catch (e) {
+        console.log("Erreur HbbTV : " + e);
+    }
 
-  // Vérifier si l'utilisateur est déjà connecté
-  const token = localStorage.getItem('token');
-  if (token) {
-      showAuthenticatedUI();
-  } else {
-      showLoginForm();
-  }
+    const token = localStorage.getItem("token");
+    if (token) {
+        loadUserInfo(token);
+        showAuthenticatedUI();
+    }
 
-  // Initialiser la navigation
-  initNavigation();
+    initNavigation();
 }
 
 function showAuthenticatedUI() {
-  document.getElementById('login_form').style.display = 'none';
-  document.getElementById('authenticated_ui').style.display = 'grid';
-
-  // Charger les informations de l'utilisateur
-  fetch('http://localhost:5001/api/user/info', {
-      method: 'GET',
-      headers: {
-          'Authorization': 'Bearer ' + localStorage.getItem('token')
-      }
-  })
-  .then(response => response.json())
-  .then(data => {
-      document.getElementById('user_name_value').innerText = data.name;
-      document.getElementById('user_email_value').innerText = data.email;
-  })
-  .catch(error => {
-      console.error("Erreur lors de la récupération des informations de l'utilisateur:", error);
-  });
+    document.getElementById("login-btn").style.display = "none";
+    document.getElementById("nav-buttons").style.display = "block";
+    document.getElementById("user-info").style.display = "block";
+    document.getElementById("welcome-message").style.display = "block"; // Afficher un contenu par défaut
 }
 
-function showLoginForm() {
-  document.getElementById('login_form').style.display = 'block';
-  document.getElementById('authenticated_ui').style.display = 'none';
+function loadUserInfo(token) {
+    fetch("http://localhost:5001/api/users/me", {
+        method: "GET",
+        headers: { "Authorization": "Bearer " + token }
+    })
+    .then(response => {
+        if (!response.ok) throw new Error("Erreur récupération utilisateur");
+        return response.json();
+    })
+    .then(data => {
+        userData = data;
+        document.getElementById("user-fullname").textContent = data.fullname;
+        document.getElementById("user-email").textContent = data.email;
+        document.getElementById("user-role").textContent = data.role;
+    })
+    .catch(error => {
+        console.log("Erreur chargement utilisateur : " + error);
+        if (error.message.includes("401")) {
+            logout();
+        }
+    });
+}
+
+function showLogin() {
+    document.getElementById("welcome-message").style.display = "none";
+    document.getElementById("login-form").style.display = "block";
+    document.getElementById("email-input").focus();
+}
+
+function hideLogin() {
+    document.getElementById("login-form").style.display = "none";
+    document.getElementById("welcome-message").style.display = "block";
 }
 
 function submitLogin() {
-  const email = document.getElementById('login_email').value;
-  const password = document.getElementById('login_password').value;
+    const email = document.getElementById("email-input").value;
+    const password = document.getElementById("password-input").value;
 
-  if (!email || !password) {
-      alert("Veuillez remplir tous les champs.");
-      return;
-  }
+    if (!email || !password) {
+        alert("Veuillez remplir tous les champs.");
+        return;
+    }
 
-  fetch('http://localhost:5001/api/auth/login', {
-      method: 'POST',
-      headers: {
-          'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ email: email, password: password })
-  })
-  .then(response => {
-      if (!response.ok) {
-          throw new Error("Identifiants invalides");
-      }
-      return response.json();
-  })
-  .then(data => {
-      // Stocker le token JWT et l'ID utilisateur dans le localStorage
-      localStorage.setItem('token', data.access_token);
-      localStorage.setItem('user_id', data.user_id); // Si l'API renvoie l'ID de l'utilisateur
-      alert("Connexion réussie !");
-      showAuthenticatedUI();
-  })
-  .catch(error => {
-      alert(error.message || "Erreur lors de la connexion.");
-  });
+    fetch("http://localhost:5001/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password })
+    })
+    .then(response => {
+        if (!response.ok) throw new Error("Erreur de connexion");
+        return response.json();
+    })
+    .then(data => {
+        localStorage.setItem("token", data.access_token);
+        loadUserInfo(data.access_token);
+        alert("Connexion réussie !");
+        hideLogin();
+        showAuthenticatedUI();
+    })
+    .catch(error => {
+        alert(error.message || "Erreur lors de la connexion.");
+    });
 }
 
 function logout() {
-  localStorage.removeItem('token');
-  localStorage.removeItem('user_id');
-  alert("Déconnexion réussie.");
-  showLoginForm();
+    localStorage.removeItem("token");
+    userData = null;
+    alert("Déconnexion réussie.");
+    window.location.reload();
 }
 
-// Afficher le formulaire de consultation
-function showConsultationForm() {
-  document.getElementById('main_menu').style.display = 'none';
-  document.getElementById('consultation_form').style.display = 'block';
+function showConsultation() {
+    document.getElementById("welcome-message").style.display = "none";
+    document.getElementById("consultation-form").style.display = "block";
+    document.getElementById("history-view").style.display = "none";
+    document.getElementById("tips-view").style.display = "none";
+    document.getElementById("symptoms-input").focus();
 }
 
-// Masquer le formulaire de consultation
-function hideConsultationForm() {
-  document.getElementById('consultation_form').style.display = 'none';
-  document.getElementById('main_menu').style.display = 'block';
+function hideConsultation() {
+    document.getElementById("consultation-form").style.display = "none";
+    document.getElementById("welcome-message").style.display = "block";
 }
 
-// Soumettre une consultation
 function submitConsultation() {
-  const symptoms = document.getElementById('symptoms_input').value;
+    const symptoms = document.getElementById("symptoms-input").value;
+    if (!symptoms) {
+        alert("Veuillez décrire vos symptômes.");
+        return;
+    }
 
-  if (!symptoms) {
-      alert("Veuillez décrire vos symptômes.");
-      return;
-  }
-
-  fetch('http://localhost:5001/api/consultation/start', {
-      method: 'POST',
-      headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer ' + localStorage.getItem('token') // Ajout du token
-      },
-      body: JSON.stringify({ symptoms: symptoms })
-  })
-  .then(response => response.json())
-  .then(data => {
-      alert("Consultation démarrée avec succès !");
-      hideConsultationForm();
-  })
-  .catch(error => {
-      alert("Erreur lors de la soumission de la consultation.");
-  });
+    fetch("http://localhost:5001/api/consultation/start", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer " + localStorage.getItem("token")
+        },
+        body: JSON.stringify({ symptoms })
+    })
+    .then(response => response.json())
+    .then(data => {
+        alert("Consultation démarrée ! ID: " + data.consultation_id);
+        updateVideoSource("assets/video.mp4");
+        hideConsultation();
+    })
+    .catch(error => {
+        alert("Erreur lors de la soumission.");
+    });
 }
 
-// Afficher les consultations passées
-function showPastConsultations() {
-  document.getElementById('main_menu').style.display = 'none';
-  document.getElementById('consultations_list').style.display = 'block';
+function showHistory() {
+    document.getElementById("welcome-message").style.display = "none";
+    document.getElementById("consultation-form").style.display = "none";
+    document.getElementById("tips-view").style.display = "none";
+    document.getElementById("history-view").style.display = "block";
 
-  fetch('http://localhost:5001/api/consultation/all', {
-      method: 'GET',
-      headers: {
-          'Authorization': 'Bearer ' + localStorage.getItem('token')
-      }
-  })
-  .then(response => {
-      if (!response.ok) {
-          return response.json().then(err => { throw err; });
-      }
-      return response.json();
-  })
-  .then(data => {
-      const container = document.getElementById('consultations_container');
-      container.innerHTML = '';
-
-      data.forEach(consultation => {
-          const item = document.createElement('div');
-          item.className = 'consultation_item';
-          item.innerHTML = `
-              <h3>Consultation du ${new Date(consultation.created_at).toLocaleDateString()}</h3>
-              <p><strong>Symptômes :</strong> ${consultation.symptoms}</p>
-              <p><strong>Diagnostic :</strong> ${consultation.diagnosis || "En attente"}</p>
-          `;
-          container.appendChild(item);
-      });
-  })
-  .catch(error => {
-      console.error("Erreur:", error);
-      if (error.message === "Unauthorized") {
-          alert("Session expirée. Veuillez vous reconnecter.");
-          logout(); // Déconnecter l'utilisateur
-      } else {
-          alert("Erreur lors de la récupération des consultations.");
-      }
-  });
+    fetch("http://localhost:5001/api/consultation/all", {
+        method: "GET",
+        headers: { "Authorization": "Bearer " + localStorage.getItem("token") }
+    })
+    .then(response => response.json())
+    .then(data => {
+        const container = document.getElementById("history-content");
+        container.innerHTML = "";
+        data.forEach(c => {
+            const card = document.createElement("div");
+            card.className = "consultation-card";
+            card.innerHTML = `
+                <p><strong>ID :</strong> ${c.id}</p>
+                <p><strong>Symptômes :</strong> ${c.symptoms}</p>
+                <p><strong>Diagnostic :</strong> ${c.diagnosis || "En attente"}</p>
+            `;
+            container.appendChild(card);
+        });
+    })
+    .catch(error => {
+        alert("Erreur lors de la récupération de l'historique.");
+    });
 }
 
-// Masquer les consultations passées
-function hidePastConsultations() {
-  document.getElementById('consultations_list').style.display = 'none';
-  document.getElementById('main_menu').style.display = 'block';
+function hideHistory() {
+    document.getElementById("history-view").style.display = "none";
+    document.getElementById("welcome-message").style.display = "block";
 }
 
-// Afficher les conseils de santé
-function showHealthTips() {
-  document.getElementById('main_menu').style.display = 'none';
-  document.getElementById('advice_display').style.display = 'block';
+function showTips() {
+    document.getElementById("welcome-message").style.display = "none";
+    document.getElementById("consultation-form").style.display = "none";
+    document.getElementById("history-view").style.display = "none";
+    document.getElementById("tips-view").style.display = "block";
 
-  fetch('http://localhost:5001/api/consultation/health-tips', {
-      method: 'POST',
-      headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer ' + localStorage.getItem('token')
-      },
-      body: JSON.stringify({ patient_id: localStorage.getItem('user_id') })
-  })
-  .then(response => response.json())
-  .then(data => {
-      document.getElementById('advice_text').innerText = data.health_tips;
-  })
-  .catch(error => {
-      alert("Erreur lors de la récupération des conseils de santé.");
-  });
+    fetch("http://localhost:5001/api/consultation/health-tips", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer " + localStorage.getItem("token")
+        },
+        body: JSON.stringify({ patient_id: userData?.id || 1 })
+    })
+    .then(response => response.json())
+    .then(data => {
+        document.getElementById("tips-content").textContent = data.health_tips || "Restez hydraté !";
+    })
+    .catch(error => {
+        alert("Erreur lors de la récupération des conseils.");
+    });
 }
 
-// Masquer les conseils de santé
-function hideHealthTips() {
-  document.getElementById('advice_display').style.display = 'none';
-  document.getElementById('main_menu').style.display = 'block';
+function hideTips() {
+    document.getElementById("tips-view").style.display = "none";
+    document.getElementById("welcome-message").style.display = "block";
 }
 
-// Récupérer les conseils pour un symptôme spécifique
-function getAdvice(symptomId) {
-  fetch(`http://localhost:5001/api/tnt/advice?symptom_id=${symptomId}`)
-      .then(response => response.json())
-      .then(data => {
-          document.getElementById('advice_text').innerText = data.advice;
-          document.getElementById('main_menu').style.display = 'none';
-          document.getElementById('advice_display').style.display = 'block';
-      })
-      .catch(error => {
-          alert("Erreur lors de la récupération des conseils.");
-      });
+function updateVideoSource(url) {
+    const video = document.getElementById("video-player");
+    video.src = url;
+    video.load();
+    video.play();
 }
 
-// Masquer les conseils
-function hideAdvice() {
-  document.getElementById('advice_display').style.display = 'none';
-  document.getElementById('main_menu').style.display = 'block';
+function initNavigation() {
+    const focusable = Array.from(document.querySelectorAll("button, input, textarea"));
+    let currentIndex = 0;
+
+    document.addEventListener("keydown", (event) => {
+        const activeElement = document.activeElement;
+
+        if (activeElement.tagName === "INPUT" || activeElement.tagName === "TEXTAREA") {
+            if (event.key === "ArrowUp" || event.key === "ArrowDown" || event.key === "Enter") {
+                event.preventDefault();
+                if (event.key === "Enter") {
+                    activeElement.blur();
+                    focusable[currentIndex].focus();
+                }
+            }
+            return;
+        }
+
+        event.preventDefault();
+        switch (event.key) {
+            case "ArrowUp":
+                currentIndex = (currentIndex - 1 + focusable.length) % focusable.length;
+                focusable[currentIndex].focus();
+                break;
+            case "ArrowDown":
+                currentIndex = (currentIndex + 1) % focusable.length;
+                focusable[currentIndex].focus();
+                break;
+            case "Enter":
+                focusable[currentIndex].click();
+                break;
+        }
+    });
+
+    if (focusable.length > 0) focusable[0].focus();
 }
-
-
