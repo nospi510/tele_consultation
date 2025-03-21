@@ -162,3 +162,41 @@ textarea {
     color: #666;
     text-align: center;
 }
+
+/* Dans #right-panel */
+#appointment-form select {
+    width: 100%;
+    padding: 10px;
+    margin: 10px 0;
+    font-size: 16px;
+    background-color: #f0f4f8;
+    color: #333;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    box-sizing: border-box;
+}
+
+#appointment-form select:focus {
+    border-color: #007bff;
+    background-color: #fff;
+    outline: none;
+}
+
+#appointments-content .appointment-card {
+    background-color: #f9f9f9;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 15px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+#appointments-content .appointment-card p {
+    margin: 5px 0;
+    font-size: 14px;
+    color: #555;
+}
+
+#appointments-content .appointment-card p strong {
+    color: #007bff;
+}

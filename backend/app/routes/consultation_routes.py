@@ -4,7 +4,7 @@ from app import db
 from app.models.consultation import Consultation, Appointment
 from app.models.user import User
 from flasgger import swag_from
-from app.services.ollama_service import get_ai_diagnosis
+from app.services.ollama_service import get_ai_diagnosis, get_ai_health_tips
 
 consultation_bp = Blueprint("consultation", __name__)
 
@@ -659,8 +659,8 @@ def update_consultation_status(consultation_id):
 @jwt_required()
 @swag_from({
     'tags': ['IA'],
-    'summary': 'Envoyer des conseils de santé automatisés',
-    'description': 'Permet à l\'IA d\'envoyer des conseils de santé généraux aux patients.',
+    'summary': 'Obtenir des conseils de santé automatisés',
+    'description': 'Permet à l\'IA de générer des conseils de santé généraux pour le patient connecté.',
     'security': [{'BearerAuth': []}],
     'parameters': [{
         'name': 'body',
@@ -675,11 +675,10 @@ def update_consultation_status(consultation_id):
     }],
     'responses': {
         '200': {
-            'description': 'Conseils de santé envoyés',
+            'description': 'Conseils de santé générés',
             'schema': {
                 'type': 'object',
                 'properties': {
-                    'message': {'type': 'string'},
                     'health_tips': {'type': 'string'}
                 }
             }
@@ -689,25 +688,19 @@ def update_consultation_status(consultation_id):
     }
 })
 def send_health_tips():
-    # Récupère l'ID du patient
+    """Générer des conseils de santé pour le patient connecté."""
     data = request.get_json()
     patient_id = data.get("patient_id")
 
-    # Récupère le patient
+    # Vérifier si le patient existe
     patient = User.query.get(patient_id)
-
-    # Vérifie si le patient existe
     if not patient or patient.role != "patient":
         return jsonify({"error": "Patient non trouvé."}), 404
 
-    # Génère des conseils de santé avec l'IA
-    health_tips = get_ai_health_tips()  # Fonction à implémenter
-
-    # Envoie les conseils au patient (ex: via SMS ou email)
-    send_sms(patient.phone_number, health_tips)
+    # Générer des conseils de santé avec l'IA
+    health_tips = get_ai_health_tips()
 
     return jsonify({
-        "message": "Conseils de santé envoyés",
         "health_tips": health_tips
     }), 200
 
@@ -1190,5 +1183,93 @@ def get_upcoming_appointments():
     } for appointment in appointments]
 
     return jsonify(appointments_data), 200
+
+@consultation_bp.route("/appointments/<int:appointment_id>/status", methods=["PUT"])
+@jwt_required()
+@swag_from({
+    'tags': ['Appointments'],
+    'summary': 'Mettre à jour le statut d’un rendez-vous',
+    'description': 'Permet au médecin assigné au rendez-vous de changer son statut (scheduled, planifié, terminé).',
+    'security': [{'BearerAuth': []}],
+    'parameters': [
+        {
+            'name': 'appointment_id',
+            'in': 'path',
+            'type': 'integer',
+            'required': True,
+            'description': 'ID du rendez-vous à mettre à jour',
+            'example': 1
+        },
+        {
+            'name': 'body',
+            'in': 'body',
+            'required': True,
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'status': {
+                        'type': 'string',
+                        'enum': ['scheduled', 'planifié', 'terminé'],
+                        'example': 'terminé'
+                    }
+                }
+            }
+        }
+    ],
+    'responses': {
+        '200': {
+            'description': 'Statut du rendez-vous mis à jour avec succès',
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'message': {'type': 'string'},
+                    'appointment_id': {'type': 'integer'},
+                    'new_status': {'type': 'string'}
+                }
+            }
+        },
+        '401': {'description': 'Non autorisé (JWT manquant ou invalide)'},
+        '403': {'description': 'Accès refusé (Utilisateur non médecin ou non assigné au RDV)'},
+        '404': {'description': 'Rendez-vous non trouvé'},
+        '400': {'description': 'Statut invalide'}
+    }
+})
+def update_appointment_status(appointment_id):
+    """Mettre à jour le statut d’un rendez-vous par le médecin assigné."""
+    # Récupère l'ID de l'utilisateur authentifié (le médecin)
+    user_id = int(get_jwt_identity())  # Convertir en entier ici
+    user = User.query.get(user_id)
+
+    # Vérifie que l'utilisateur est un médecin
+    if user.role != "doctor":
+        return jsonify({"error": "Accès refusé. Seuls les médecins peuvent modifier le statut."}), 403
+
+    # Récupère le rendez-vous
+    appointment = Appointment.query.get(appointment_id)
+    if not appointment:
+        return jsonify({"error": "Rendez-vous non trouvé."}), 404
+
+    # Vérifie que le médecin est bien celui assigné au rendez-vous
+    if appointment.doctor_id != user_id:
+        return jsonify({"error": "Accès refusé. Vous n’êtes pas assigné à ce rendez-vous."}), 403
+
+    # Récupère le nouveau statut depuis la requête
+    data = request.get_json()
+    new_status = data.get("status")
+
+    # Vérifie que le statut est valide
+    valid_statuses = ["scheduled", "planifié", "terminé"]
+    if not new_status or new_status not in valid_statuses:
+        return jsonify({"error": "Statut invalide. Utilisez : scheduled, planifié, terminé."}), 400
+
+    # Met à jour le statut
+    appointment.status = new_status
+    db.session.commit()
+
+    return jsonify({
+        "message": "Statut du rendez-vous mis à jour avec succès",
+        "appointment_id": appointment.id,
+        "new_status": new_status
+    }), 200
 
 
