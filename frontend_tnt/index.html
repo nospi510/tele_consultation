@@ -23,6 +23,8 @@
                     <button id="consult-btn" onclick="showConsultation()">Nouvelle consultation</button>
                     <button id="history-btn" onclick="showHistory()">Mes consultations</button>
                     <button id="tips-btn" onclick="showTips()">Conseils santé</button>
+                    <button id="appointment-btn" onclick="showAppointment()">Planifier un RDV</button>
+                    <button id="upcoming-btn" onclick="showUpcomingAppointments()">Mes RDV à venir</button>
                     <button id="logout-btn" onclick="logout()">Se déconnecter</button>
                 </div>
             </div>
@@ -37,10 +39,14 @@
         <!-- Colonne centrale : Vidéo -->
         <div id="video-panel">
             <h2>Dr Santé Live</h2>
-            <video id="video-player" width="768" height="576" controls>
-                <source src="assets/video.mp4" type="video/mp4" />
-                Votre téléviseur ne supporte pas la vidéo.
-            </video>
+            <iframe width="768" height="576" 
+                src="https://www.youtube.com/embed/l8PMl7tUDIE?si=uHZxjwGFcH9eZTG7" 
+                title="YouTube video player" 
+                frameborder="0" 
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
+                referrerpolicy="strict-origin-when-cross-origin" 
+                allowfullscreen>
+            </iframe>
         </div>
 
         <!-- Colonne droite : Contenu dynamique -->
@@ -74,6 +80,24 @@
                 <h2>Conseils Santé</h2>
                 <p id="tips-content"></p>
                 <button onclick="hideTips()" tabindex="0">Retour</button>
+            </div>
+
+            <!-- Formulaire de planification de rendez-vous -->
+            <div id="appointment-form" style="display:none;">
+                <h2>Planifier un Rendez-vous</h2>
+                <select id="doctor-select" tabindex="0">
+                    <option value="">Choisir un médecin</option>
+                </select>
+                <input type="datetime-local" id="appointment-date" tabindex="0" />
+                <button onclick="submitAppointment()" tabindex="0">Planifier</button>
+                <button onclick="hideAppointment()" tabindex="0">Retour</button>
+            </div>
+
+            <!-- Liste des rendez-vous à venir -->
+            <div id="upcoming-appointments" style="display:none;">
+                <h2>Mes RDV à venir</h2>
+                <div id="appointments-content"></div>
+                <button onclick="hideUpcomingAppointments()" tabindex="0">Retour</button>
             </div>
 
             <!-- Message de bienvenue par défaut -->
