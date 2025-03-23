@@ -1,0 +1,23 @@
+<ion-header>
+  <ion-toolbar color="primary">
+    <ion-title>Historique des Consultations</ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="goToHome()">
+        <ion-icon name="home-outline"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  <ion-list>
+    <ion-item *ngFor="let consultation of consultations" button (click)="goToConsultationDetail(consultation.id)">
+      <ion-label>
+        <h2>Symptômes : {{ consultation.symptoms }}</h2>
+        <p>Diagnostic : {{ consultation.diagnosis || 'En attente' }}</p>
+        <p>Date : {{ consultation.created_at | date:'medium' }}</p>
+        <p>Type : {{ consultation.is_ai_diagnosis ? 'IA' : 'Médecin' }}</p>
+      </ion-label>
+    </ion-item>
+  </ion-list>
+</ion-content>

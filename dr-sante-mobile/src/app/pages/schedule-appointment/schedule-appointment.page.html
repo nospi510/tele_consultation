@@ -1,0 +1,35 @@
+<ion-header>
+  <ion-toolbar color="primary">
+    <ion-title>Planifier un Rendez-vous</ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="goToHome()">
+        <ion-icon name="home-outline"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  <ion-card>
+    <ion-card-header>
+      <ion-card-title>Nouveau Rendez-vous</ion-card-title>
+    </ion-card-header>
+    <ion-card-content>
+      <ion-item>
+        <ion-label>Médecin</ion-label>
+        <ion-select [(ngModel)]="doctorId" placeholder="Choisir un médecin">
+          <ion-select-option *ngFor="let doctor of doctors" [value]="doctor.id">
+            {{ doctor.fullname }} ({{ doctor.email }})
+          </ion-select-option>
+        </ion-select>
+      </ion-item>
+      <ion-item>
+        <ion-label>Date et heure</ion-label>
+        <ion-datetime [(ngModel)]="appointmentDate" displayFormat="YYYY-MM-DD HH:mm" placeholder="Choisir une date"></ion-datetime>
+      </ion-item>
+      <ion-button expand="block" color="success" (click)="scheduleAppointment()" [disabled]="!doctorId || !appointmentDate">
+        Planifier
+      </ion-button>
+    </ion-card-content>
+  </ion-card>
+</ion-content>

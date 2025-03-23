@@ -1,0 +1,26 @@
+<ion-header>
+  <ion-toolbar color="primary">
+    <ion-title>Rendez-vous à Venir</ion-title>
+    <ion-buttons slot="start">
+      <ion-back-button (click)="goToHome()"></ion-back-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  <ion-list>
+    <ion-item *ngFor="let appointment of appointments">
+      <ion-label>
+        <h2>Patient : {{ appointment.patient_name }}</h2>
+        <p>Médecin : {{ appointment.doctor_name }}</p>
+        <p>Date : {{ appointment.appointment_date | date:'medium' }}</p>
+        <ion-select [(ngModel)]="appointment.status" (ionChange)="updateStatus(appointment)">
+          <ion-select-option *ngFor="let status of statusOptions" [value]="status">{{ status }}</ion-select-option>
+        </ion-select>
+      </ion-label>
+      <ion-button slot="end" color="danger" (click)="cancelAppointment(appointment.id)">
+        Annuler
+      </ion-button>
+    </ion-item>
+  </ion-list>
+</ion-content>
