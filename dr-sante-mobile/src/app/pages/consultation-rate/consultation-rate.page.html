@@ -1,0 +1,26 @@
+<ion-header>
+  <ion-toolbar color="primary">
+    <ion-title>Noter la Consultation</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  <ion-card>
+    <ion-card-header>
+      <ion-card-title>Évaluez votre expérience</ion-card-title>
+    </ion-card-header>
+    <ion-card-content>
+      <ion-item>
+        <ion-label>Note (1-5)</ion-label>
+        <ion-range min="1" max="5" step="1" [(ngModel)]="rating" color="primary" pin="true"></ion-range>
+      </ion-item>
+      <ion-item>
+        <ion-label position="floating">Commentaire</ion-label>
+        <ion-textarea [(ngModel)]="comment" rows="3"></ion-textarea>
+      </ion-item>
+      <ion-button expand="block" color="success" (click)="rateConsultation()" [disabled]="rating < 1 || rating > 5">
+        Envoyer l’évaluation
+      </ion-button>
+    </ion-card-content>
+  </ion-card>
+</ion-content>

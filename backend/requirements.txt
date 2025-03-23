@@ -7,5 +7,6 @@ mysql-connector-python
 python-dotenv
 flasgger
 twilio
-rasn
+rasa
 gunicorn
+flask-socketio

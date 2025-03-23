@@ -1,0 +1,21 @@
+<ion-header>
+  <ion-toolbar color="primary">
+    <ion-title>Mes Consultations</ion-title>
+    <ion-buttons slot="start">
+      <ion-back-button (click)="goToHome()"></ion-back-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  <ion-list>
+    <ion-item *ngFor="let consultation of consultations" button (click)="goToConsultationDetail(consultation.id)">
+      <ion-label>
+        <h2>Patient : {{ consultation.patient_name }}</h2>
+        <p>Symptômes : {{ consultation.symptoms }}</p>
+        <p>Statut : {{ consultation.status }}</p>
+        <p>Date : {{ consultation.created_at | date:'medium' }}</p>
+      </ion-label>
+    </ion-item>
+  </ion-list>
+</ion-content>

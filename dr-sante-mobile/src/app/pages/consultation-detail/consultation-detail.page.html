@@ -1,0 +1,23 @@
+<ion-header>
+  <ion-toolbar color="primary">
+    <ion-title>Détails de la Consultation</ion-title>
+    <ion-buttons slot="start">
+      <ion-back-button defaultHref="/consultation-history"></ion-back-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  <ion-card>
+    <ion-card-header>
+      <ion-card-title>Consultation #{{ consultation.id }}</ion-card-title>
+    </ion-card-header>
+    <ion-card-content>
+      <p><strong>Symptômes :</strong> {{ consultation.symptoms }}</p>
+      <p><strong>Diagnostic :</strong> {{ consultation.diagnosis || 'En attente' }}</p>
+      <p><strong>Type :</strong> {{ consultation.is_ai_diagnosis ? 'IA' : 'Médecin' }}</p>
+      <p><strong>Date :</strong> {{ consultation.created_at | date:'medium' }}</p>
+      <p><strong>Historique :</strong> {{ consultation.conversation_history || 'Aucune conversation' }}</p>
+    </ion-card-content>
+  </ion-card>
+</ion-content>
