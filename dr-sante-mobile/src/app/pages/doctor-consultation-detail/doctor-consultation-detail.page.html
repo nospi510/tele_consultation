@@ -1,0 +1,51 @@
+<ion-header>
+  <ion-toolbar color="primary">
+    <ion-title>Consultation #{{ consultation.id }}</ion-title>
+    <ion-buttons slot="start">
+      <ion-back-button (click)="goToHome()"></ion-back-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  <ion-card>
+    <ion-card-header>
+      <ion-card-title>Détails de la Consultation</ion-card-title>
+    </ion-card-header>
+    <ion-card-content>
+      <p><strong>Patient :</strong> {{ consultation.patient_name }}</p>
+      <p><strong>Symptômes :</strong> {{ consultation.symptoms }}</p>
+      <p><strong>Diagnostic :</strong> {{ consultation.diagnosis || 'En attente' }}</p>
+      <p><strong>Statut :</strong> {{ consultation.status }}</p>
+      
+      <ion-list class="chat-list">
+        <ion-item *ngFor="let message of messages" [color]="message.sender === 'Médecin' ? 'light' : 'medium'">
+          <ion-label class="chat-message">
+            <strong>{{ message.sender }} :</strong> {{ message.text }}
+          </ion-label>
+        </ion-item>
+      </ion-list>
+
+      <ion-item>
+        <ion-label>Changer Statut</ion-label>
+        <ion-select [(ngModel)]="selectedStatus" (ionChange)="updateStatus()">
+          <ion-select-option *ngFor="let status of statusOptions" [value]="status">{{ status }}</ion-select-option>
+        </ion-select>
+      </ion-item>
+      <ion-item>
+        <ion-label position="floating">Nouveau Message</ion-label>
+        <ion-textarea [(ngModel)]="newMessage" rows="3"></ion-textarea>
+      </ion-item>
+      <ion-button expand="block" color="primary" (click)="continueConsultation()" [disabled]="!newMessage">
+        Envoyer Message
+      </ion-button>
+      <ion-item>
+        <ion-label position="floating">Rappel</ion-label>
+        <ion-textarea [(ngModel)]="reminderMessage" rows="3"></ion-textarea>
+      </ion-item>
+      <ion-button expand="block" color="success" (click)="sendReminder()" [disabled]="!reminderMessage">
+        Envoyer Rappel
+      </ion-button>
+    </ion-card-content>
+  </ion-card>
+</ion-content>

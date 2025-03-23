@@ -1,0 +1,33 @@
+<ion-header>
+  <ion-toolbar color="primary">
+    <ion-title>Inscription - Dr Santé</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  <ion-card>
+    <ion-card-header>
+      <ion-card-title>S’inscrire</ion-card-title>
+    </ion-card-header>
+    <ion-card-content>
+      <ion-item>
+        <ion-label position="floating">Nom complet</ion-label>
+        <ion-input [(ngModel)]="fullname" required></ion-input>
+      </ion-item>
+      <ion-item>
+        <ion-label position="floating">Email</ion-label>
+        <ion-input [(ngModel)]="email" type="email" required></ion-input>
+      </ion-item>
+      <ion-item>
+        <ion-label position="floating">Mot de passe</ion-label>
+        <ion-input [(ngModel)]="password" type="password" required></ion-input>
+      </ion-item>
+      <ion-button expand="block" color="primary" (click)="register()" class="ion-margin-top">
+        S’inscrire
+      </ion-button>
+      <ion-button expand="block" fill="clear" (click)="goToLogin()">
+        Déjà un compte ? Connectez-vous
+      </ion-button>
+    </ion-card-content>
+  </ion-card>
+</ion-content>

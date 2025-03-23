@@ -4,6 +4,7 @@ from app.models.user import User
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_jwt_extended import create_access_token
 from flasgger import swag_from
+from flask_jwt_extended import jwt_required, get_jwt_identity
 
 auth_bp = Blueprint("auth", __name__)
 
@@ -51,8 +52,8 @@ def register():
         'schema': {
             'type': 'object',
             'properties': {
-                'email': {'type': 'string','example': 'nick@visiotech.me'},
-                'password': {'type': 'string','example': 'passer'}
+                'email': {'type': 'string', 'example': 'nick@visiotech.me'},
+                'password': {'type': 'string', 'example': 'passer'}
             }
         }
     }],
@@ -62,7 +63,8 @@ def register():
             'schema': {
                 'type': 'object',
                 'properties': {
-                    'access_token': {'type': 'string'}
+                    'access_token': {'type': 'string'},
+                    'user_role': {'type': 'string'}  # Ajout dans la documentation
                 }
             }
         },
@@ -77,8 +79,47 @@ def login():
     user = User.query.filter_by(email=data["email"]).first()
 
     if user and check_password_hash(user.password_hash, data["password"]):
-        # Convertir l'ID de l'utilisateur en string
-        token = create_access_token(identity=str(user.id))  # ID converti en string
-        return jsonify({"access_token": token}), 200
+        token = create_access_token(identity=str(user.id))
+        return jsonify({
+            "access_token": token,
+            "user_role": user.role  # Ajout du rôle dans la réponse
+        }), 200
 
     return jsonify({"error": "Invalid credentials"}), 401
+
+@auth_bp.route("/home", methods=["GET"])
+@jwt_required()
+@swag_from({
+    'tags': ['Auth'],
+    'summary': 'Récupérer les infos de l’utilisateur connecté pour la page d’accueil',
+    'security': [{'BearerAuth': []}],
+    'responses': {
+        '200': {
+            'description': 'Infos utilisateur récupérées',
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'id': {'type': 'integer'},
+                    'fullname': {'type': 'string'},
+                    'email': {'type': 'string'},
+                    'role': {'type': 'string'}
+                }
+            }
+        },
+        '401': {'description': 'Non autorisé'}
+    }
+})
+def home():
+    """Récupérer les informations de l’utilisateur connecté pour la page d’accueil"""
+    user_id = get_jwt_identity()
+    user = User.query.get(user_id)
+
+    if not user:
+        return jsonify({"error": "Utilisateur non trouvé"}), 404
+
+    return jsonify({
+        'id': user.id,
+        'fullname': user.fullname,
+        'email': user.email,
+        'role': user.role
+    }), 200

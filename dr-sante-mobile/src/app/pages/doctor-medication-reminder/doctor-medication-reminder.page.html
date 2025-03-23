@@ -1,0 +1,41 @@
+<ion-header>
+  <ion-toolbar color="primary">
+    <ion-title>Rappel de Médicaments</ion-title>
+    <ion-buttons slot="start">
+      <ion-back-button (click)="goToHome()"></ion-back-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  <ion-card>
+    <ion-card-header>
+      <ion-card-title>Envoyer un Rappel</ion-card-title>
+    </ion-card-header>
+    <ion-card-content>
+      <ion-item>
+        <ion-label>Patient</ion-label>
+        <ion-select [(ngModel)]="patientId" placeholder="Choisir un patient">
+          <ion-select-option *ngFor="let patient of patients" [value]="patient.id">
+            {{ patient.fullname }} ({{ patient.email }})
+          </ion-select-option>
+        </ion-select>
+      </ion-item>
+      <ion-item>
+        <ion-label position="floating">Nom du Médicament</ion-label>
+        <ion-input [(ngModel)]="medicationName"></ion-input>
+      </ion-item>
+      <ion-item>
+        <ion-label position="floating">Dosage</ion-label>
+        <ion-input [(ngModel)]="dosage"></ion-input>
+      </ion-item>
+      <ion-item>
+        <ion-label>Heure</ion-label>
+        <ion-datetime [(ngModel)]="time" displayFormat="HH:mm" placeholder="Choisir une heure"></ion-datetime>
+      </ion-item>
+      <ion-button expand="block" color="success" (click)="sendReminder()" [disabled]="!patientId || !medicationName || !dosage || !time">
+        Envoyer Rappel
+      </ion-button>
+    </ion-card-content>
+  </ion-card>
+</ion-content>
