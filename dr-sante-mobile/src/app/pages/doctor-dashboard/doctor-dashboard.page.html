@@ -1,0 +1,48 @@
+<ion-header>
+  <ion-toolbar color="primary">
+    <ion-title>Bienvenue, Dr. {{ user.fullname || 'Médecin' }}</ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="logout()">
+        <ion-icon name="log-out-outline"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  <ion-card>
+    <ion-card-header>
+      <ion-card-title>Tableau de Bord Médecin</ion-card-title>
+    </ion-card-header>
+    <ion-card-content>
+      <p>Email : {{ user.email }}</p>
+      <p>Rôle : {{ user.role }}</p>
+      <ion-item>
+        <ion-label>Disponibilité</ion-label>
+        <ion-toggle 
+          [(ngModel)]="isAvailable" 
+          (ionChange)="toggleAvailability($event)" 
+          [disabled]="isLoading" 
+        ></ion-toggle>
+      </ion-item>
+      <ion-button expand="block" color="primary" (click)="goToDoctorConsultations()">
+        Mes Consultations
+      </ion-button>
+      <ion-button expand="block" color="warning" (click)="goToHealthAlerts()">
+        Alertes de Santé
+      </ion-button>
+      <ion-button expand="block" color="success" (click)="goToMedicationReminder()">
+        Rappel de Médicaments
+      </ion-button>
+      <ion-button expand="block" color="secondary" (click)="goToGenerateReport()">
+        Générer un Rapport
+      </ion-button>
+      <ion-button expand="block" color="tertiary" (click)="goToSendNotification()">
+        Envoyer une Notification
+      </ion-button>
+      <ion-button expand="block" color="medium" (click)="goToUpcomingAppointments()">
+        Rendez-vous à Venir
+      </ion-button>
+    </ion-card-content>
+  </ion-card>
+</ion-content>

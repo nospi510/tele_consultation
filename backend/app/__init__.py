@@ -5,9 +5,11 @@ from flask_jwt_extended import JWTManager
 from flask_cors import CORS
 from flasgger import Swagger
 import os
+from flask_socketio import SocketIO
 
 db = SQLAlchemy()
 jwt = JWTManager()
+socketio = SocketIO()  # Déclare socketio globalement
 
 def create_app():
     app = Flask(__name__)
@@ -16,23 +18,26 @@ def create_app():
     db.init_app(app)
     Migrate(app, db)
     jwt.init_app(app)
-    CORS(app, resources={r"/api/*": {"origins": "*"}})
+    CORS(app, origins="*")  # Autorise toutes les origines pour tester
 
     # Configuration Swagger pour la sécurité Bearer
     app.config['SWAGGER'] = {
         'securityDefinitions': {
             'BearerAuth': {
                 'type': 'apiKey',
-                'name': 'Authorization',  
-                'in': 'header',           
-                'description': 'JWT Bearer token, must be prefixed with `Bearer` (e.g., "Bearer <token>")' 
+                'name': 'Authorization',
+                'in': 'header',
+                'description': 'JWT Bearer token, must be prefixed with `Bearer` (e.g., "Bearer <token>")'
             }
         },
-        'security': [{'BearerAuth': []}],  # Applique ce schéma de sécurité à toutes les routes
+        'security': [{'BearerAuth': []}],
     }
-    
+
     # Initialisation de Swagger
     Swagger(app)
+
+    # Initialisation de SocketIO
+    socketio.init_app(app, cors_allowed_origins="*")  # Initialise SocketIO avec l’app
 
     # Importation des Blueprints
     from app.routes.auth_routes import auth_bp
@@ -42,7 +47,6 @@ def create_app():
     from app.routes.user_routes import user_bp
     from app.routes.tnt_routes import tnt_bp
 
-
     # Enregistrement des Blueprints
     app.register_blueprint(auth_bp, url_prefix="/api/auth")
     app.register_blueprint(consultation_bp, url_prefix="/api/consultation")
@@ -51,4 +55,4 @@ def create_app():
     app.register_blueprint(user_bp, url_prefix="/api/users")
     app.register_blueprint(tnt_bp, url_prefix="/api/tnt")
 
-    return app
+    return app, socketio  # Retourne app et socketio

@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
-from app import db
+from app import db, socketio
 from app.models.consultation import Consultation, Appointment
 from app.models.user import User
 from flasgger import swag_from
@@ -75,6 +75,13 @@ def get_consultations():
     return jsonify([{"id": c.id, "symptoms": c.symptoms, "status": c.status} for c in consultations])
 
 
+# Fonction pour émettre une mise à jour WebSocket
+def send_consultation_update(consultation_id, conversation_history):
+    socketio.emit('consultation_update', {
+        'consultation_id': consultation_id,
+        'conversation_history': conversation_history
+    }, room=str(consultation_id))
+
 @consultation_bp.route("/start", methods=["POST"])
 @jwt_required()
 @swag_from({
@@ -110,53 +117,48 @@ def get_consultations():
     }
 })
 def start_consultation():
-    # Récupère l'ID de l'utilisateur authentifié
     user_id = get_jwt_identity()
     user = User.query.get(user_id)
 
-    # Vérifie si l'utilisateur existe
     if not user:
         return jsonify({"error": "Utilisateur non trouvé."}), 404
 
-    # Récupère les symptômes de la requête
     data = request.get_json()
     symptoms = data.get("symptoms")
 
     if not symptoms:
         return jsonify({"error": "Les symptômes sont obligatoires."}), 400
 
-    # Vérifie si un médecin est disponible
     available_doctor = User.query.filter(User.role == "doctor", User.is_available == True).first()
 
     if available_doctor:
-        # Un médecin est disponible, on lui assigne la consultation
         consultation = Consultation(
             user_id=user_id,
             symptoms=symptoms,
             doctor_id=available_doctor.id,
-            conversation_history=f"Patient: {symptoms}"  # Initialise l'historique
+            conversation_history=f"Patient: {symptoms}"
         )
     else:
-        # Aucun médecin disponible, l'IA prend la relève
         diagnosis = get_ai_diagnosis(symptoms)
         consultation = Consultation(
             user_id=user_id,
             symptoms=symptoms,
             diagnosis=diagnosis,
             is_ai_diagnosis=True,
-            conversation_history=f"Patient: {symptoms}\nIA: {diagnosis}"  # Initialise l'historique
+            conversation_history=f"Patient: {symptoms}\nIA: {diagnosis}"
         )
 
-    # Sauvegarde la consultation dans la base de données
     db.session.add(consultation)
     db.session.commit()
+
+    # Émet une mise à jour WebSocket
+    send_consultation_update(consultation.id, consultation.conversation_history)
 
     return jsonify({
         "message": "Consultation démarrée",
         "consultation_id": consultation.id,
         "is_ai_diagnosis": consultation.is_ai_diagnosis
     }), 201
-
 
 @consultation_bp.route("/all", methods=["GET"])
 @jwt_required()
@@ -263,7 +265,7 @@ def get_consultation(consultation_id):
 @swag_from({
     'tags': ['Consultations'],
     'summary': 'Continuer une consultation',
-    'description': 'Permet à un utilisateur authentifié de continuer une consultation existante en ajoutant de nouveaux symptômes ou questions. L\'IA prend en compte l\'historique précédent.',
+    'description': 'Permet à un utilisateur authentifié de continuer une consultation existante en ajoutant de nouveaux symptômes ou questions.',
     'security': [{'BearerAuth': []}],
     'parameters': [
         {
@@ -302,44 +304,110 @@ def get_consultation(consultation_id):
     }
 })
 def continue_consultation(consultation_id):
-    # Récupère l'ID de l'utilisateur authentifié
     user_id = get_jwt_identity()
-
-    # Récupère la consultation existante
     consultation = Consultation.query.filter_by(id=consultation_id, user_id=user_id).first()
 
-    # Vérifie si la consultation existe et appartient à l'utilisateur
     if not consultation:
         return jsonify({"error": "Consultation non trouvée ou ne vous appartient pas."}), 404
 
-    # Récupère le nouveau message de la requête
     data = request.get_json()
     new_message = data.get("message")
 
     if not new_message:
         return jsonify({"error": "Le message est obligatoire."}), 400
 
-    # Met à jour l'historique de la conversation
     consultation.conversation_history += f"\nPatient: {new_message}"
 
-    # Si un médecin est assigné, on lui envoie le nouveau message
     if consultation.doctor_id:
-        # Ici, on pourrait envoyer une notification au médecin (ex: via WebSocket ou email)
         consultation.conversation_history += f"\nMédecin: En attente de réponse..."
     else:
-        # Si l'IA est en charge, on génère une nouvelle réponse en tenant compte de l'historique
         diagnosis = get_ai_diagnosis(consultation.conversation_history)
         consultation.diagnosis = diagnosis
         consultation.conversation_history += f"\nIA: {diagnosis}"
 
-    # Sauvegarde les modifications dans la base de données
     db.session.commit()
+
+    # Émet une mise à jour WebSocket
+    send_consultation_update(consultation_id, consultation.conversation_history)
 
     return jsonify({
         "message": "Consultation mise à jour",
         "diagnosis": consultation.diagnosis,
         "is_ai_diagnosis": consultation.is_ai_diagnosis
     }), 200
+
+
+@consultation_bp.route("/doctor/continue/<int:consultation_id>", methods=["POST"])
+@jwt_required()
+@swag_from({
+    'tags': ['Consultations'],
+    'summary': 'Continuer une consultation (Médecin)',
+    'description': 'Permet à un médecin authentifié de répondre à une consultation existante.',
+    'security': [{'BearerAuth': []}],
+    'parameters': [
+        {
+            'name': 'consultation_id',
+            'in': 'path',
+            'required': True,
+            'type': 'integer',
+            'description': 'ID de la consultation à continuer'
+        },
+        {
+            'name': 'body',
+            'in': 'body',
+            'required': True,
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'message': {'type': 'string', 'example': 'Prenez un antidouleur et reposez-vous.'}
+                }
+            }
+        }
+    ],
+    'responses': {
+        '200': {
+            'description': 'Réponse du médecin ajoutée avec succès',
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'message': {'type': 'string'},
+                    'conversation_history': {'type': 'string'}
+                }
+            }
+        },
+        '401': {'description': 'Non autorisé (JWT manquant ou invalide)'},
+        '404': {'description': 'Consultation non trouvée ou ne vous appartient pas'}
+    }
+})
+def doctor_continue_consultation(consultation_id):
+    user_id = get_jwt_identity()
+    consultation = Consultation.query.filter_by(id=consultation_id, doctor_id=user_id).first()
+
+    if not consultation:
+        return jsonify({"error": "Consultation non trouvée ou ne vous appartient pas."}), 404
+
+    data = request.get_json()
+    new_message = data.get("message")
+
+    if not new_message:
+        return jsonify({"error": "Le message est obligatoire."}), 400
+
+    consultation.conversation_history += f"\nMédecin: {new_message}"
+
+    if consultation.status == 'pending':
+        consultation.status = 'en cours'
+
+    db.session.commit()
+
+    # Émet une mise à jour WebSocket
+    send_consultation_update(consultation_id, consultation.conversation_history)
+
+    return jsonify({
+        "message": "Réponse ajoutée avec succès",
+        "conversation_history": consultation.conversation_history
+    }), 200
+
+
 
 @consultation_bp.route("/doctors/available", methods=["GET"])
 @jwt_required()
@@ -866,6 +934,63 @@ def get_doctor_consultations():
     } for consultation in consultations]
 
     return jsonify(consultations_data), 200
+
+@consultation_bp.route('/doctor/<int:consultation_id>', methods=['GET'])
+@jwt_required()
+@swag_from({
+    'tags': ['Consultations'],
+    'summary': 'Récupérer les détails d’une consultation pour un docteur',
+    'parameters': [
+        {
+            'name': 'consultation_id',
+            'in': 'path',
+            'required': True,
+            'type': 'integer',
+            'description': 'ID de la consultation'
+        }
+    ],
+    'security': [{'BearerAuth': []}],
+    'responses': {
+        '200': {
+            'description': 'Détails de la consultation',
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'id': {'type': 'integer'},
+                    'patient_name': {'type': 'string'},
+                    'symptoms': {'type': 'string'},
+                    'diagnosis': {'type': 'string'},
+                    'conversation_history': {'type': 'string'},
+                    'status': {'type': 'string'},
+                    'created_at': {'type': 'string'}
+                }
+            }
+        },
+        '404': {'description': 'Consultation non trouvée'},
+        '401': {'description': 'Non autorisé'}
+    }
+})
+def get_doctor_consultation(consultation_id):
+    user_id = get_jwt_identity()
+    consultation = Consultation.query.get(consultation_id)
+
+    if not consultation:
+        return jsonify({"error": "Consultation non trouvée"}), 404
+
+    # Vérifie que le docteur est assigné à cette consultation
+    if consultation.doctor_id != int(user_id):
+        return jsonify({"error": "Accès non autorisé à cette consultation"}), 401
+
+    return jsonify({
+        'id': consultation.id,
+        'patient_name': consultation.user.fullname,
+        'symptoms': consultation.symptoms,
+        'diagnosis': consultation.diagnosis or 'En attente',
+        'conversation_history': consultation.conversation_history or '',
+        'status': consultation.status,
+        'created_at': consultation.created_at.isoformat()
+    }), 200
+
 
 @consultation_bp.route("/medication-reminder", methods=["POST"])
 @jwt_required()

@@ -1,0 +1,29 @@
+<ion-header>
+  <ion-toolbar color="primary">
+    <ion-title>Connexion - Dr Santé</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  <ion-card>
+    <ion-card-header>
+      <ion-card-title>Se connecter</ion-card-title>
+    </ion-card-header>
+    <ion-card-content>
+      <ion-item>
+        <ion-label position="floating">Email</ion-label>
+        <ion-input [(ngModel)]="email" type="email" required></ion-input>
+      </ion-item>
+      <ion-item>
+        <ion-label position="floating">Mot de passe</ion-label>
+        <ion-input [(ngModel)]="password" type="password" required></ion-input>
+      </ion-item>
+      <ion-button expand="block" color="primary" (click)="login()" class="ion-margin-top">
+        Connexion
+      </ion-button>
+      <ion-button expand="block" fill="clear" (click)="goToRegister()">
+        Pas de compte ? Inscrivez-vous
+      </ion-button>
+    </ion-card-content>
+  </ion-card>
+</ion-content>

@@ -88,7 +88,7 @@ def get_users():
     } for user in users]), 200
 
 @user_bp.route("/availability", methods=["PUT"])
-@jwt_required() 
+@jwt_required()
 @swag_from({
     'tags': ['Doctors'],
     'summary': 'Mettre à jour la disponibilité d’un docteur',
@@ -103,7 +103,7 @@ def get_users():
             }
         }
     }],
-    'security': [{'BearerAuth': []}],  # Ajout de la sécurité avec JWT Bearer Token
+    'security': [{'BearerAuth': []}],
     'responses': {
         '200': {'description': 'Disponibilité mise à jour avec succès'},
         '401': {'description': 'Non autorisé (Utilisateur non authentifié ou non docteur)'},
@@ -113,30 +113,32 @@ def get_users():
 })
 def update_doctor_availability():
     """Mettre à jour la disponibilité du docteur"""
-    
-    # Récupérer l'ID de l'utilisateur à partir du token JWT
     user_id = get_jwt_identity()
-
-    # Trouver l'utilisateur par son ID
     user = User.query.get(user_id)
 
     if not user:
         return jsonify({"error": "Utilisateur non trouvé"}), 404
 
-    # Vérifier que l'utilisateur est un docteur
     if user.role != "doctor":
         return jsonify({"error": "Seuls les docteurs peuvent modifier leur disponibilité"}), 401
 
     # Récupérer les données de la requête
     data = request.get_json()
+    print("Données reçues :", data)  # Log pour déboguer ce que reçoit le backend
 
-    # Mettre à jour la disponibilité du docteur
-    user.is_available = data.get("is_available", user.is_available)
-    
-    # Sauvegarder les modifications dans la base de données
+    # Vérifier explicitement la présence et la valeur de is_available
+    if "is_available" not in data:
+        return jsonify({"error": "Le champ 'is_available' est requis"}), 400
+
+    new_availability = bool(data["is_available"])  # Convertir en booléen Python
+    user.is_available = new_availability
+    print("Nouvelle disponibilité définie :", user.is_available)  # Log pour vérifier
+
+    # Sauvegarder les modifications
     db.session.commit()
 
     return jsonify({"message": "Disponibilité mise à jour avec succès", "is_available": user.is_available}), 200
+
 
 @user_bp.route("/create_admin", methods=["POST"])
 @swag_from({
