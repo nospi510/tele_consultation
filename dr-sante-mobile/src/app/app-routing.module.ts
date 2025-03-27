@@ -20,7 +20,6 @@ const routes: Routes = [
   { path: 'doctor/generate-report', loadChildren: () => import('./pages/doctor-generate-report/doctor-generate-report.module').then(m => m.DoctorGenerateReportPageModule) },
   { path: 'doctor/send-notification', loadChildren: () => import('./pages/doctor-send-notification/doctor-send-notification.module').then(m => m.DoctorSendNotificationPageModule) },
   { path: 'doctor/upcoming-appointments', loadChildren: () => import('./pages/doctor-upcoming-appointments/doctor-upcoming-appointments.module').then(m => m.DoctorUpcomingAppointmentsPageModule) },
-  { path: 'ongoing-consultation/:id', loadComponent: () => import('./pages/ongoing-consultation/ongoing-consultation.page').then(m => m.OngoingConsultationPage) }, // Ajout de la route standalone
 ];
 
 @NgModule({
