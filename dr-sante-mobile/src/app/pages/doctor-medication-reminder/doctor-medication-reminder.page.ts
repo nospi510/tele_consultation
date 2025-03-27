@@ -40,7 +40,7 @@ export class DoctorMedicationReminderPage implements OnInit {
   loadPatients() {
     const token = this.authService.getToken();
     const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`);
-    this.http.get(`${environment.apiUrl}/user/`, { headers }).subscribe(
+    this.http.get(`${environment.apiUrl}/users/`, { headers }).subscribe(
       (data: any) => this.patients = data.filter((user: any) => user.role === 'patient'),
       () => this.goToHome()
     );

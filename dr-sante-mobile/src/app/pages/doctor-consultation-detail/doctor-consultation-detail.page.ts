@@ -23,6 +23,7 @@ export class DoctorConsultationDetailPage implements OnInit, OnDestroy {
   statusOptions = ['pending', 'en cours', 'terminée', 'annulée'];
   selectedStatus: string = '';
   messages: { sender: string; text: string }[] = [];
+  isPatientTyping: boolean = false;
 
   constructor(
     private route: ActivatedRoute,
@@ -40,11 +41,7 @@ export class DoctorConsultationDetailPage implements OnInit, OnDestroy {
       const id = this.route.snapshot.paramMap.get('id');
       if (id) {
         this.loadConsultation(id);
-        // Rejoint la salle WebSocket pour cette consultation
-        this.socket.emit('join_consultation', { consultation_id: id });
-        this.socket.on('consultation_update', (data: any) => {
-          this.updateMessages(data.conversation_history);
-        });
+        this.setupWebSocket(id);
       } else {
         this.goToHome();
       }
@@ -68,29 +65,55 @@ export class DoctorConsultationDetailPage implements OnInit, OnDestroy {
         this.updateMessages(this.consultation.conversation_history);
       },
       (error) => {
-        console.error('Erreur lors du chargement :', error);
+        console.error('Erreur chargement:', error);
         this.goToHome();
       }
     );
   }
 
+  setupWebSocket(id: string) {
+    this.socket.emit('join_consultation', { consultation_id: id });
+    this.socket.on('consultation_update', (data: any) => {
+      this.consultation.conversation_history = data.conversation_history || this.consultation.conversation_history;
+      this.consultation.status = data.status || this.consultation.status;
+      this.consultation.diagnosis = data.diagnosis || this.consultation.diagnosis;
+      this.checkMessageSync(data.conversation_history); // Nouveau : Vérifie la synchronisation
+      this.updateMessages(this.consultation.conversation_history);
+    });
+    this.socket.on('typing_update', (data: any) => {
+      this.isPatientTyping = data.user_role === 'patient' && data.is_typing;
+    });
+  }
+
   updateMessages(conversationHistory: string) {
-    this.messages = [];
-    if (conversationHistory) {
-      const lines = conversationHistory.split('\n');
-      lines.forEach((line: string) => {
-        if (line.trim()) {
-          const [sender, ...textParts] = line.split(': ');
-          const senderText = sender.trim();
-          const messageText = textParts.join(': ').trim();
-          if (!this.messages.some(msg => msg.sender === senderText && msg.text === messageText)) {
-            this.messages.push({ sender: senderText, text: messageText });
-          }
-        }
-      });
+    if (!conversationHistory) {
+      this.messages = [];
+      return;
     }
-    // Met aussi à jour l’historique brut pour l’affichage statique
-    this.consultation.conversation_history = conversationHistory;
+    const newMessages = conversationHistory.split('\n')
+      .filter(line => line.trim())
+      .map(line => {
+        const [sender, ...textParts] = line.split(': ');
+        return { sender: sender.trim(), text: textParts.join(': ').trim() };
+      });
+    this.messages = newMessages.filter((msg, index, self) =>
+      index === self.findIndex(m => m.sender === msg.sender && m.text === msg.text)
+    );
+  }
+
+  // Nouveau : Vérifie si les messages locaux correspondent au backend
+  checkMessageSync(serverHistory: string) {
+    const localHistory = this.messages.map(msg => `${msg.sender}: ${msg.text}`).join('\n');
+    if (serverHistory && serverHistory.trim() !== localHistory.trim()) {
+      this.showToast('Messages synchronisés avec le serveur', 'warning');
+    }
+  }
+
+  onTyping(event: any) {
+    const id = this.route.snapshot.paramMap.get('id');
+    if (id) {
+      this.socket.emit('typing', { consultation_id: id, user_role: 'doctor', is_typing: !!this.newMessage });
+    }
   }
 
   continueConsultation() {
@@ -100,18 +123,15 @@ export class DoctorConsultationDetailPage implements OnInit, OnDestroy {
     const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`);
     const messageToSend = this.newMessage;
 
-    // Ajoute immédiatement le message localement
     this.messages.push({ sender: 'Médecin', text: messageToSend });
     this.newMessage = '';
+    this.socket.emit('typing', { consultation_id: this.consultation.id, user_role: 'doctor', is_typing: false });
 
     this.http.post(`${environment.apiUrl}/consultation/doctor/continue/${this.consultation.id}`, { message: messageToSend }, { headers }).subscribe(
-      (response: any) => {
-        this.showToast('Message envoyé avec succès', 'success');
-        // L’événement WebSocket mettra à jour les messages pour tous
-      },
+      () => this.showToast('Message envoyé', 'success'),
       (error) => {
-        console.error('Erreur lors de l’envoi :', error);
-        this.showToast('Erreur lors de l’envoi du message', 'danger');
+        console.error('Erreur envoi:', error);
+        this.showToast('Erreur envoi', 'danger');
       }
     );
   }
@@ -122,9 +142,12 @@ export class DoctorConsultationDetailPage implements OnInit, OnDestroy {
     this.http.put(`${environment.apiUrl}/consultation/status/${this.consultation.id}`, { status: this.selectedStatus }, { headers }).subscribe(
       () => {
         this.consultation.status = this.selectedStatus;
-        this.showToast('Statut mis à jour avec succès', 'success');
+        this.showToast('Statut mis à jour', 'success');
       },
-      () => this.showToast('Erreur lors de la mise à jour du statut', 'danger')
+      (error) => {
+        console.error('Erreur statut:', error);
+        this.showToast('Erreur statut', 'danger');
+      }
     );
   }
 
@@ -134,9 +157,12 @@ export class DoctorConsultationDetailPage implements OnInit, OnDestroy {
     this.http.post(`${environment.apiUrl}/consultation/reminder/${this.consultation.id}`, { reminder_message: this.reminderMessage }, { headers }).subscribe(
       () => {
         this.reminderMessage = '';
-        this.showToast('Rappel envoyé avec succès', 'success');
+        this.showToast('Rappel envoyé', 'success');
       },
-      () => this.showToast('Erreur lors de l’envoi du rappel', 'danger')
+      (error) => {
+        console.error('Erreur rappel:', error);
+        this.showToast('Erreur rappel', 'danger');
+      }
     );
   }
 

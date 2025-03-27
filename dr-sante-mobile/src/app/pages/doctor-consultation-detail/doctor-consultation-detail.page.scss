@@ -1,22 +1,137 @@
-ion-card {
-    border-radius: 15px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    animation: fadeIn 0.5s ease-in-out;
+.consultation-container {
+  display: flex;
+  justify-content: center;
+  padding: 15px;
+  background: #e0f7fa; /* Bleu ciel pour l'arrière-plan */
+}
+
+.consultation-card {
+  width: 100%;
+  max-width: 650px;
+  border-radius: 25px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+  background: #ffffff;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  &:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.12);
   }
-  
-  
-@keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
+}
+
+.header-gradient {
+  background: linear-gradient(135deg, #0288d1, #0277bd); /* Bleu plus foncé pour l'en-tête */
+  color: #fff;
+  text-align: center;
+  padding: 20px 10px;
+  border-radius: 25px 25px 0 0;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+.info-section {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 25px;
+  padding: 0 15px;
+  ion-chip {
+    border-radius: 20px;
+    padding: 8px 12px;
+    font-size: 14px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    background: #b3e5fc; /* Bleu clair pour les chips */
+    color: #01579b;
+    transition: transform 0.2s ease;
+    &:hover {
+      transform: scale(1.05);
+    }
   }
+}
 
 .chat-list {
-    max-height: 400px;
-    overflow-y: auto;
-    margin-bottom: 10px;
+  max-height: 55vh;
+  overflow-y: auto;
+  border: none;
+  border-radius: 15px;
+  margin-bottom: 25px;
+  background: #e0f7fa; /* Même bleu ciel que l'arrière-plan */
+  padding: 10px;
+}
+
+.chat-item {
+  padding: 12px 15px;
+  margin: 8px 0;
+  border-radius: 15px;
+  max-width: 75%;
+  &.doctor { /* Messages envoyés par le médecin */
+    background: #2196f3; /* Bleu WhatsApp */
+    color: #fff;
+    margin-left: auto;
   }
-  
+  &.patient { /* Messages reçus du patient */
+    background: #212121; /* Noir */
+    color: #fff;
+    margin-right: auto;
+  }
+}
+
+.doctor-avatar {
+  background: #0288d1; /* Bleu foncé pour l'avatar médecin */
+  color: #fff;
+  border-radius: 50%;
+  padding: 8px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
+}
+
+.patient-avatar {
+  background: #4fc3f7; /* Bleu clair pour l'avatar patient */
+  color: #fff;
+  border-radius: 50%;
+  padding: 8px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
+}
+
 .chat-message {
-    white-space: pre-wrap;
-    padding: 10px;
+  white-space: pre-wrap;
+  h3 {
+    font-size: 15px;
+    margin-bottom: 6px;
+    font-weight: 500;
   }
+  p {
+    font-size: 16px;
+    line-height: 1.4;
+  }
+}
+
+.status-select {
+  margin-bottom: 20px;
+  border-radius: 15px;
+  background: #b3e5fc; /* Bleu clair pour le select */
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.06);
+  padding: 5px 10px;
+  ion-select {
+    --padding-start: 10px;
+    font-size: 16px;
+    color: #01579b; /* Texte bleu foncé */
+  }
+}
+
+.message-input, .reminder-input {
+  margin-bottom: 20px;
+  border-radius: 15px;
+  background: #b3e5fc; /* Bleu clair pour les inputs */
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.06);
+  ion-textarea {
+    --padding-start: 15px;
+    --padding-end: 15px;
+    font-size: 16px;
+    color: #01579b; /* Texte bleu foncé */
+  }
+  ion-button {
+    margin: 5px;
+    --border-radius: 10px;
+    --background: #0288d1; /* Bouton bleu foncé */
+    --color: #fff;
+  }
+}

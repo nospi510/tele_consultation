@@ -5,8 +5,42 @@ from app.models.consultation import Consultation, Appointment
 from app.models.user import User
 from flasgger import swag_from
 from app.services.ollama_service import get_ai_diagnosis, get_ai_health_tips
+from flask_socketio import join_room
 
 consultation_bp = Blueprint("consultation", __name__)
+
+
+# Fonction pour émettre une mise à jour WebSocket
+def send_consultation_update(consultation_id, consultation):
+    socketio.emit('consultation_update', {
+        'consultation_id': consultation_id,
+        'conversation_history': consultation.conversation_history,
+        'status': consultation.status,
+        'diagnosis': consultation.diagnosis
+    }, room=str(consultation_id))
+
+# Ajoute cette nouvelle fonction pour gérer l’événement "typing"
+def send_typing_update(consultation_id, user_role, is_typing):
+    socketio.emit('typing_update', {
+        'consultation_id': consultation_id,
+        'user_role': user_role,  # 'patient' ou 'doctor'
+        'is_typing': is_typing   # true ou false
+    }, room=str(consultation_id))
+
+# Ajoute cet événement WebSocket dans consultation_routes.py
+@socketio.on('typing')
+def handle_typing(data):
+    consultation_id = data['consultation_id']
+    user_role = data['user_role']
+    is_typing = data['is_typing']
+    send_typing_update(consultation_id, user_role, is_typing)
+
+@socketio.on('join_consultation')
+def handle_join(data):
+    consultation_id = data['consultation_id']
+    join_room(str(consultation_id))
+    socketio.emit('room_joined', {'consultation_id': consultation_id}, room=str(consultation_id))
+
 
 @consultation_bp.route("/", methods=["POST"])
 @jwt_required()
@@ -74,13 +108,6 @@ def get_consultations():
     consultations = Consultation.query.filter_by(user_id=user_id).all()
     return jsonify([{"id": c.id, "symptoms": c.symptoms, "status": c.status} for c in consultations])
 
-
-# Fonction pour émettre une mise à jour WebSocket
-def send_consultation_update(consultation_id, conversation_history):
-    socketio.emit('consultation_update', {
-        'consultation_id': consultation_id,
-        'conversation_history': conversation_history
-    }, room=str(consultation_id))
 
 @consultation_bp.route("/start", methods=["POST"])
 @jwt_required()
@@ -152,8 +179,8 @@ def start_consultation():
     db.session.commit()
 
     # Émet une mise à jour WebSocket
-    send_consultation_update(consultation.id, consultation.conversation_history)
-
+    send_consultation_update(consultation.id, consultation)  # Envoie plus de données
+    
     return jsonify({
         "message": "Consultation démarrée",
         "consultation_id": consultation.id,
@@ -253,6 +280,8 @@ def get_consultation(consultation_id):
         "id": consultation.id,
         "symptoms": consultation.symptoms,
         "diagnosis": consultation.diagnosis,
+        "status": consultation.status,
+        "conversation_history": consultation.conversation_history,
         "is_ai_diagnosis": consultation.is_ai_diagnosis,
         "created_at": consultation.created_at.isoformat()
     }
@@ -327,15 +356,13 @@ def continue_consultation(consultation_id):
 
     db.session.commit()
 
-    # Émet une mise à jour WebSocket
-    send_consultation_update(consultation_id, consultation.conversation_history)
+    send_consultation_update(consultation_id, consultation)  # Envoie plus de données
 
     return jsonify({
         "message": "Consultation mise à jour",
         "diagnosis": consultation.diagnosis,
         "is_ai_diagnosis": consultation.is_ai_diagnosis
     }), 200
-
 
 @consultation_bp.route("/doctor/continue/<int:consultation_id>", methods=["POST"])
 @jwt_required()
@@ -399,14 +426,12 @@ def doctor_continue_consultation(consultation_id):
 
     db.session.commit()
 
-    # Émet une mise à jour WebSocket
-    send_consultation_update(consultation_id, consultation.conversation_history)
+    send_consultation_update(consultation_id, consultation)  # Envoie plus de données
 
     return jsonify({
         "message": "Réponse ajoutée avec succès",
         "conversation_history": consultation.conversation_history
     }), 200
-
 
 
 @consultation_bp.route("/doctors/available", methods=["GET"])
