@@ -24,7 +24,8 @@ export class ConsultationPage implements OnInit, OnDestroy {
   messages: { sender: string; text: string }[] = [];
   newMessage: string = '';
   consultationId: number | null = null;
-  isAIDiagnosis: boolean = false;
+  consultation: any = {};
+  isDoctorTyping: boolean = false;
 
   constructor(
     private authService: AuthService,
@@ -68,28 +69,28 @@ export class ConsultationPage implements OnInit, OnDestroy {
         this.isLoading = false;
         this.consultationStarted = true;
         this.consultationId = response.consultation_id;
-        this.isAIDiagnosis = response.is_ai_diagnosis;
+        this.consultation = {
+          symptoms: this.symptoms,
+          diagnosis: response.is_ai_diagnosis ? response.diagnosis : 'En attente',
+          status: 'pending'
+        };
+        this.messages.push({ sender: 'Patient', text: this.symptoms });
 
-        // Initialise les messages localement
-        if (this.isAIDiagnosis) {
-          this.messages.push({ sender: 'Vous', text: this.symptoms });
-          this.messages.push({ sender: 'IA', text: response.diagnosis || 'Décrivez vos symptômes pour un diagnostic initial.' });
-        } else {
-          this.messages.push({ sender: 'Vous', text: this.symptoms });
-          this.messages.push({ sender: 'Système', text: 'Un médecin est disponible. Discussion démarrée.' });
-        }
-
-        // Rejoint la salle WebSocket
         if (this.consultationId) {
           this.socket.emit('join_consultation', { consultation_id: this.consultationId });
           this.socket.on('consultation_update', (data: any) => {
             this.updateMessages(data.conversation_history);
           });
+          this.socket.on('typing_update', (data: any) => {
+            if (data.user_role === 'doctor') {
+              this.isDoctorTyping = data.is_typing;
+            }
+          });
         }
       },
       (error) => {
         this.isLoading = false;
-        this.showToast('Erreur lors du démarrage de la consultation', 'danger');
+        this.showToast('Erreur lors du démarrage', 'danger');
       }
     );
   }
@@ -111,6 +112,12 @@ export class ConsultationPage implements OnInit, OnDestroy {
     }
   }
 
+  onTyping(event: any) {
+    if (this.consultationId) {
+      this.socket.emit('typing', { consultation_id: this.consultationId, user_role: 'patient', is_typing: !!this.newMessage });
+    }
+  }
+
   continueConsultation() {
     if (!this.newMessage || !this.consultationId) return;
 
@@ -118,25 +125,14 @@ export class ConsultationPage implements OnInit, OnDestroy {
     const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`);
     const messageToSend = this.newMessage;
 
-    // Ajoute immédiatement le message localement
-    this.messages.push({ sender: 'Vous', text: messageToSend });
+    this.messages.push({ sender: 'Patient', text: messageToSend });
     this.newMessage = '';
+    this.socket.emit('typing', { consultation_id: this.consultationId, user_role: 'patient', is_typing: false });
 
     this.http.post(`${environment.apiUrl}/consultation/continue/${this.consultationId}`, { message: messageToSend }, { headers }).subscribe(
-      (response: any) => {
-        this.showToast('Message envoyé avec succès', 'success');
-        if (this.isAIDiagnosis && response.diagnosis) {
-          this.messages.push({ sender: 'IA', text: response.diagnosis });
-        }
-      },
-      (error) => this.showToast('Erreur lors de la poursuite de la consultation', 'danger')
+      () => this.showToast('Message envoyé', 'success'),
+      () => this.showToast('Erreur lors de l’envoi', 'danger')
     );
-  }
-
-  stopAndRate() {
-    if (this.consultationId) {
-      this.router.navigate([`/consultation-rate/${this.consultationId}`]);
-    }
   }
 
   goToHome() {
