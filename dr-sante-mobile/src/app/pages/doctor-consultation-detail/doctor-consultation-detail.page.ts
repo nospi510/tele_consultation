@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, ElementRef } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
@@ -24,6 +24,13 @@ export class DoctorConsultationDetailPage implements OnInit, OnDestroy {
   selectedStatus: string = '';
   messages: { sender: string; text: string }[] = [];
   isPatientTyping: boolean = false;
+  inCall: boolean = false;
+  localStream: MediaStream | null = null;
+  remoteStream: MediaStream | null = null;
+  peerConnection: RTCPeerConnection | null = null;
+
+  @ViewChild('localVideo', { static: false }) localVideo!: ElementRef<HTMLVideoElement>;
+  @ViewChild('remoteVideo', { static: false }) remoteVideo!: ElementRef<HTMLVideoElement>;
 
   constructor(
     private route: ActivatedRoute,
@@ -53,6 +60,7 @@ export class DoctorConsultationDetailPage implements OnInit, OnDestroy {
     if (id) {
       this.socket.emit('leave_consultation', { consultation_id: id });
     }
+    this.endCall();
   }
 
   loadConsultation(id: string) {
@@ -77,12 +85,19 @@ export class DoctorConsultationDetailPage implements OnInit, OnDestroy {
       this.consultation.conversation_history = data.conversation_history || this.consultation.conversation_history;
       this.consultation.status = data.status || this.consultation.status;
       this.consultation.diagnosis = data.diagnosis || this.consultation.diagnosis;
-      this.checkMessageSync(data.conversation_history); // Nouveau : Vérifie la synchronisation
+      this.checkMessageSync(data.conversation_history);
       this.updateMessages(this.consultation.conversation_history);
     });
     this.socket.on('typing_update', (data: any) => {
       this.isPatientTyping = data.user_role === 'patient' && data.is_typing;
     });
+    this.socket.on('call_joined', (data: any) => {
+      console.log('Médecin - Patient a rejoint:', data.user_id);
+      this.startCall(id); // Crée et envoie l’offre seulement quand le patient rejoint
+    });
+    this.socket.on('webrtc_offer', (data: any) => this.handleOffer(data));
+    this.socket.on('webrtc_answer', (data: any) => this.handleAnswer(data));
+    this.socket.on('webrtc_ice_candidate', (data: any) => this.handleIceCandidate(data));
   }
 
   updateMessages(conversationHistory: string) {
@@ -101,7 +116,6 @@ export class DoctorConsultationDetailPage implements OnInit, OnDestroy {
     );
   }
 
-  // Nouveau : Vérifie si les messages locaux correspondent au backend
   checkMessageSync(serverHistory: string) {
     const localHistory = this.messages.map(msg => `${msg.sender}: ${msg.text}`).join('\n');
     if (serverHistory && serverHistory.trim() !== localHistory.trim()) {
@@ -164,6 +178,120 @@ export class DoctorConsultationDetailPage implements OnInit, OnDestroy {
         this.showToast('Erreur rappel', 'danger');
       }
     );
+  }
+
+  proposeCall() {
+    const id = this.route.snapshot.paramMap.get('id');
+    if (id && !this.inCall) {
+      const doctorId = this.authService.getUserId();
+      console.log('Médecin - Proposition appel avec consultation_id:', id, 'doctor_id:', doctorId);
+      this.socket.emit('propose_call', { consultation_id: id, doctor_id: doctorId });
+      this.inCall = true;
+      this.initializeWebRTC(); // Initialise WebRTC mais attend call_joined pour l’offre
+      this.showToast('Appel proposé au patient, en attente de sa réponse...', 'primary');
+    }
+  }
+
+  async initializeWebRTC() {
+    this.peerConnection = new RTCPeerConnection({
+      iceServers: [
+        { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' }
+      ]
+    });
+
+    try {
+      this.localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      console.log('Médecin - Local stream obtenu:', this.localStream.getTracks());
+      this.localVideo.nativeElement.srcObject = this.localStream;
+      this.localStream.getTracks().forEach(track => {
+        console.log('Médecin - Ajout piste:', track.kind, track.id);
+        this.peerConnection!.addTrack(track, this.localStream!);
+      });
+
+      this.peerConnection.ontrack = (event) => {
+        this.remoteStream = event.streams[0];
+        console.log('Médecin - Remote stream reçu:', this.remoteStream.getTracks());
+        this.remoteVideo.nativeElement.srcObject = this.remoteStream;
+      };
+
+      this.peerConnection.onicecandidate = (event) => {
+        if (event.candidate) {
+          console.log('Médecin - ICE candidate émis:', event.candidate.candidate);
+          this.socket.emit('webrtc_ice_candidate', {
+            consultation_id: this.consultation.id,
+            candidate: event.candidate
+          });
+        } else {
+          console.log('Médecin - Fin collecte ICE candidates');
+        }
+      };
+
+      this.peerConnection.onconnectionstatechange = () => {
+        console.log('Médecin - État connexion:', this.peerConnection!.connectionState);
+      };
+    } catch (error) {
+      console.error('Médecin - Erreur WebRTC:', error);
+      this.showToast('Erreur lors de l’initialisation de l’appel: ' , 'danger');
+      this.inCall = false;
+    }
+  }
+
+  async startCall(id: string) {
+    try {
+      const offer = await this.peerConnection!.createOffer();
+      await this.peerConnection!.setLocalDescription(offer);
+      console.log('Médecin - Offre envoyée:', offer);
+      this.socket.emit('webrtc_offer', { consultation_id: id, sdp: offer });
+    } catch (error) {
+      console.error('Médecin - Erreur création offre:', error);
+      this.showToast('Erreur lors du démarrage de l’appel', 'danger');
+    }
+  }
+
+  async handleOffer(data: any) {
+    try {
+      console.log('Médecin - Offre reçue (ne devrait pas arriver):', data.sdp);
+      await this.peerConnection!.setRemoteDescription(new RTCSessionDescription(data.sdp));
+      const answer = await this.peerConnection!.createAnswer();
+      await this.peerConnection!.setLocalDescription(answer);
+      console.log('Médecin - Réponse envoyée:', answer);
+      this.socket.emit('webrtc_answer', { consultation_id: this.consultation.id, sdp: answer });
+    } catch (error) {
+      console.error('Médecin - Erreur traitement offre:', error);
+    }
+  }
+
+  async handleAnswer(data: any) {
+    try {
+      console.log('Médecin - Réponse reçue:', data.sdp);
+      await this.peerConnection!.setRemoteDescription(new RTCSessionDescription(data.sdp));
+    } catch (error) {
+      console.error('Médecin - Erreur traitement réponse:', error);
+    }
+  }
+
+  async handleIceCandidate(data: any) {
+    try {
+      console.log('Médecin - ICE candidate reçu:', data.candidate);
+      await this.peerConnection!.addIceCandidate(new RTCIceCandidate(data.candidate));
+    } catch (error) {
+      console.error('Médecin - Erreur ajout ICE candidate:', error);
+    }
+  }
+
+  endCall() {
+    if (this.peerConnection) {
+      this.peerConnection.close();
+      this.peerConnection = null;
+    }
+    if (this.localStream) {
+      this.localStream.getTracks().forEach(track => track.stop());
+      this.localStream = null;
+    }
+    this.inCall = false;
+    this.localVideo.nativeElement.srcObject = null;
+    this.remoteVideo.nativeElement.srcObject = null;
   }
 
   goToHome() {

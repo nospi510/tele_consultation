@@ -3,12 +3,14 @@ import { HttpClient } from '@angular/common/http';
 import { environment } from '../../environments/environment';
 import { Observable } from 'rxjs';
 import { tap } from 'rxjs/operators';
+import { JwtHelperService } from '@auth0/angular-jwt';
 
 @Injectable({
   providedIn: 'root'
 })
 export class AuthService {
   private apiUrl = `${environment.apiUrl}/auth`;
+  private jwtHelper = new JwtHelperService();
 
   constructor(private http: HttpClient) {}
 
@@ -22,8 +24,12 @@ export class AuthService {
         if (response.access_token) {
           localStorage.setItem('token', response.access_token);
         }
-        if (response.user_role) {  // 🔹 Stocke le rôle utilisateur
+        if (response.user_role) {
           localStorage.setItem('user_role', response.user_role);
+        }
+        // Optionnel : Stocker l’ID si renvoyé directement dans la réponse
+        if (response.user_id) {
+          localStorage.setItem('user_id', response.user_id);
         }
       })
     );
@@ -31,7 +37,8 @@ export class AuthService {
 
   logout(): void {
     localStorage.removeItem('token');
-    localStorage.removeItem('user_role'); // 🔹 Supprime le rôle utilisateur
+    localStorage.removeItem('user_role');
+    localStorage.removeItem('user_id');
   }
 
   getToken(): string | null {
@@ -39,10 +46,20 @@ export class AuthService {
   }
 
   getUserRole(): string | null {
-    return localStorage.getItem('user_role');  // 🔹 Récupère le rôle utilisateur
+    return localStorage.getItem('user_role');
   }
 
   isLoggedIn(): boolean {
-    return !!this.getToken();
+    const token = this.getToken();
+    return !!token && !this.jwtHelper.isTokenExpired(token);
+  }
+
+  getUserId(): string | null {
+    const token = this.getToken();
+    if (token) {
+      const decoded = this.jwtHelper.decodeToken(token);
+      return decoded.user_id || decoded.id || decoded.sub || null; // Ajuste selon ton JWT
+    }
+    return null;
   }
 }

@@ -82,7 +82,8 @@ def login():
         token = create_access_token(identity=str(user.id))
         return jsonify({
             "access_token": token,
-            "user_role": user.role  # Ajout du rôle dans la réponse
+            "user_role": user.role,  # Ajout du rôle dans la réponse
+            'user_id': user.id  # Optionnel si déjà dans le JWT
         }), 200
 
     return jsonify({"error": "Invalid credentials"}), 401

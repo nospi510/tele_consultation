@@ -1,7 +1,127 @@
-ion-card {
-    border-radius: 15px;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+.login-background {
+  --background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+}
+
+.login-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+  padding: 20px;
+}
+
+.login-card {
+  border-radius: 20px;
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+  background: rgba(255, 255, 255, 0.95);
+  max-width: 400px;
+  width: 100%;
+  animation: slide-up 0.5s ease-in-out;
+
+  .card-header {
+    text-align: center;
+    padding-bottom: 10px;
+
+    .title-gradient {
+      font-size: 1.8rem;
+      font-weight: 700;
+      background: linear-gradient(90deg, #1e3a8a, #3b82f6);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    ion-card-subtitle {
+      color: #6b7280;
+      font-size: 1rem;
+      margin-top: 5px;
+    }
   }
-  ion-button {
-    margin-top: 10px;
+
+  ion-card-content {
+    padding: 20px;
   }
+}
+
+.header-gradient {
+  --background: linear-gradient(90deg, #1e3a8a 0%, #3b82f6 100%);
+  --color: white;
+}
+
+.input-item {
+  --background: #f3f4f6;
+  --border-radius: 12px;
+  margin-bottom: 20px;
+  padding: 5px;
+
+  ion-label {
+    color: #4b5563;
+    font-weight: 500;
+  }
+
+  ion-input {
+    --color: #1f2937;
+    --placeholder-color: #9ca3af;
+    font-size: 1rem;
+  }
+
+  .input-icon {
+    color: #3b82f6;
+    font-size: 1.2rem;
+    margin-right: 10px;
+  }
+}
+
+.login-button {
+  --background: linear-gradient(90deg, #1e3a8a, #3b82f6);
+  --border-radius: 12px;
+  --padding-top: 12px;
+  --padding-bottom: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  transition: transform 0.2s ease;
+
+  &:hover {
+    --background: linear-gradient(90deg, #1e40af, #60a5fa);
+    transform: scale(1.05);
+  }
+
+  ion-icon {
+    margin-left: 10px;
+  }
+}
+
+.register-link {
+  text-align: center;
+  margin-top: 20px;
+
+  ion-text {
+    color: #6b7280;
+    font-size: 0.9rem;
+  }
+
+  .link-button {
+    --color: #3b82f6;
+    font-weight: 500;
+    text-transform: none;
+
+    &:hover {
+      --color: #1e40af;
+    }
+  }
+}
+
+@keyframes slide-up {
+  from {
+    transform: translateY(50px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}

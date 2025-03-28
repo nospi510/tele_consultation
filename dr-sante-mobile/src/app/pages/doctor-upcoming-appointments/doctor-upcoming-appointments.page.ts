@@ -5,19 +5,18 @@ import { environment } from '../../../environments/environment';
 import { Router } from '@angular/router';
 import { IonicModule } from '@ionic/angular';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
 import { ToastController } from '@ionic/angular';
+import { FormsModule } from '@angular/forms';
 
 @Component({
   selector: 'app-doctor-upcoming-appointments',
   templateUrl: './doctor-upcoming-appointments.page.html',
   styleUrls: ['./doctor-upcoming-appointments.page.scss'],
   standalone: true,
-  imports: [IonicModule, CommonModule, FormsModule]
+  imports: [IonicModule, CommonModule, FormsModule] // Ajout de FormsModule pour ngModel
 })
 export class DoctorUpcomingAppointmentsPage implements OnInit {
   appointments: any[] = [];
-  statusOptions = ['scheduled', 'planifié', 'terminé'];
 
   constructor(
     private authService: AuthService,
@@ -27,8 +26,8 @@ export class DoctorUpcomingAppointmentsPage implements OnInit {
   ) {}
 
   ngOnInit() {
-    if (!this.authService.isLoggedIn() || this.authService.getUserRole() !== 'doctor') {
-      this.goToHome();
+    if (!this.authService.isLoggedIn()) {
+      this.router.navigate(['/login']);
     } else {
       this.loadAppointments();
     }
@@ -37,39 +36,49 @@ export class DoctorUpcomingAppointmentsPage implements OnInit {
   loadAppointments() {
     const token = this.authService.getToken();
     const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`);
+
     this.http.get(`${environment.apiUrl}/consultation/upcoming-appointments`, { headers }).subscribe(
       (data: any) => this.appointments = data,
-      () => this.goToHome()
+      () => this.showToast('Erreur lors du chargement des rendez-vous', 'danger')
     );
   }
 
-  updateStatus(appointment: any) {
+  async updateStatus(appointment: any) {
     const token = this.authService.getToken();
     const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`);
-    this.http.put(`${environment.apiUrl}/consultation/appointments/${appointment.id}/status`, { status: appointment.status }, { headers }).subscribe(
-      () => this.showToast('Statut mis à jour avec succès', 'success'),
-      () => this.showToast('Erreur lors de la mise à jour du statut', 'danger')
+    const body = { status: appointment.status };
+
+    this.http.put(`${environment.apiUrl}/consultation/appointments/${appointment.id}/status`, body, { headers }).subscribe(
+      async () => {
+        await this.showToast('Statut mis à jour avec succès', 'success');
+        this.loadAppointments(); // Recharge pour refléter les changements
+      },
+      async (error) => {
+        await this.showToast('Erreur lors de la mise à jour du statut', 'danger');
+        console.error(error);
+      }
     );
   }
 
-  cancelAppointment(id: number) {
+  async cancelAppointment(id: number) {
     const token = this.authService.getToken();
     const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`);
+
     this.http.delete(`${environment.apiUrl}/consultation/cancel-appointment/${id}`, { headers }).subscribe(
-      () => {
-        this.showToast('Rendez-vous annulé avec succès', 'success');
+      async () => {
+        await this.showToast('Rendez-vous annulé avec succès', 'success');
         this.loadAppointments();
       },
-      () => this.showToast('Erreur lors de l’annulation', 'danger')
+      async () => await this.showToast('Erreur lors de l’annulation', 'danger')
     );
-  }
-
-  goToHome() {
-    this.router.navigate(['/doctor-dashboard']);
   }
 
   async showToast(message: string, color: string) {
     const toast = await this.toastController.create({ message, duration: 2000, color, position: 'top' });
     toast.present();
+  }
+
+  goToHome() {
+    this.router.navigate(['/doctor-dashboard']);
   }
 }

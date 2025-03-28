@@ -1,48 +1,61 @@
-<ion-header>
-  <ion-toolbar color="primary">
+<ion-header translucent>
+  <ion-toolbar class="header-gradient">
     <ion-title>Bienvenue, Dr. {{ user.fullname || 'Médecin' }}</ion-title>
     <ion-buttons slot="end">
-      <ion-button (click)="logout()">
+      <ion-button (click)="logout()" class="logout-btn">
         <ion-icon name="log-out-outline"></ion-icon>
       </ion-button>
     </ion-buttons>
   </ion-toolbar>
 </ion-header>
 
-<ion-content class="ion-padding">
-  <ion-card>
-    <ion-card-header>
-      <ion-card-title>Tableau de Bord Médecin</ion-card-title>
-    </ion-card-header>
-    <ion-card-content>
-      <p>Email : {{ user.email }}</p>
-      <p>Rôle : {{ user.role }}</p>
-      <ion-item>
-        <ion-label>Disponibilité</ion-label>
-        <ion-toggle 
-          [(ngModel)]="isAvailable" 
-          (ionChange)="toggleAvailability($event)" 
-          [disabled]="isLoading" 
-        ></ion-toggle>
-      </ion-item>
-      <ion-button expand="block" color="primary" (click)="goToDoctorConsultations()">
-        Mes Consultations
-      </ion-button>
-      <ion-button expand="block" color="warning" (click)="goToHealthAlerts()">
-        Alertes de Santé
-      </ion-button>
-      <ion-button expand="block" color="success" (click)="goToMedicationReminder()">
-        Rappel de Médicaments
-      </ion-button>
-      <ion-button expand="block" color="secondary" (click)="goToGenerateReport()">
-        Générer un Rapport
-      </ion-button>
-      <ion-button expand="block" color="tertiary" (click)="goToSendNotification()">
-        Envoyer une Notification
-      </ion-button>
-      <ion-button expand="block" color="medium" (click)="goToUpcomingAppointments()">
-        Rendez-vous à Venir
-      </ion-button>
-    </ion-card-content>
-  </ion-card>
+<ion-content class="ion-padding doctor-background">
+  <div class="dashboard-container">
+    <ion-card class="dashboard-card">
+      <ion-card-header class="card-header">
+        <ion-card-title class="title-gradient">Tableau de Bord Médecin</ion-card-title>
+        <ion-card-subtitle class="user-info">
+          <span>{{ user.email }}</span> | <span>{{ user.role }}</span>
+        </ion-card-subtitle>
+      </ion-card-header>
+      <ion-card-content class="dashboard-content">
+        <ion-item class="availability-item" lines="none">
+          <ion-icon name="wifi-outline" slot="start" class="status-icon"></ion-icon>
+          <ion-label>Disponibilité</ion-label>
+          <ion-toggle 
+            [(ngModel)]="isAvailable" 
+            (ionChange)="toggleAvailability($event)" 
+            [disabled]="isLoading" 
+            class="availability-toggle"
+          ></ion-toggle>
+        </ion-item>
+        <div class="action-grid">
+          <ion-card class="action-card" (click)="goToDoctorConsultations()">
+            <ion-icon name="medkit-outline" class="action-icon"></ion-icon>
+            <ion-label>Consultations</ion-label>
+          </ion-card>
+          <ion-card class="action-card" (click)="goToHealthAlerts()">
+            <ion-icon name="alert-circle-outline" class="action-icon"></ion-icon>
+            <ion-label>Alertes</ion-label>
+          </ion-card>
+          <ion-card class="action-card" (click)="goToMedicationReminder()">
+            <ion-icon name="pill-outline" class="action-icon"></ion-icon>
+            <ion-label>Rappels</ion-label>
+          </ion-card>
+          <ion-card class="action-card" (click)="goToGenerateReport()">
+            <ion-icon name="document-text-outline" class="action-icon"></ion-icon>
+            <ion-label>Rapports</ion-label>
+          </ion-card>
+          <ion-card class="action-card" (click)="goToSendNotification()">
+            <ion-icon name="notifications-outline" class="action-icon"></ion-icon>
+            <ion-label>Notifications</ion-label>
+          </ion-card>
+          <ion-card class="action-card" (click)="goToUpcomingAppointments()">
+            <ion-icon name="calendar-outline" class="action-icon"></ion-icon>
+            <ion-label>Rendez-vous</ion-label>
+          </ion-card>
+        </div>
+      </ion-card-content>
+    </ion-card>
+  </div>
 </ion-content>
