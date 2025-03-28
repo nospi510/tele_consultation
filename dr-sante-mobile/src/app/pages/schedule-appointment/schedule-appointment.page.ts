@@ -19,6 +19,7 @@ export class ScheduleAppointmentPage implements OnInit {
   doctors: any[] = [];
   doctorId: number | null = null;
   appointmentDate: string = '';
+  isDatePickerOpen: boolean = false;
 
   constructor(
     private authService: AuthService,
@@ -45,7 +46,20 @@ export class ScheduleAppointmentPage implements OnInit {
     );
   }
 
+  toggleDatePicker() {
+    this.isDatePickerOpen = true; // Ouvre le popover
+  }
+
+  onDateChange() {
+    this.isDatePickerOpen = false; // Ferme le popover après sélection
+  }
+
   async scheduleAppointment() {
+    if (!this.doctorId || !this.appointmentDate) {
+      await this.showToast('Veuillez sélectionner un médecin et une date', 'warning');
+      return;
+    }
+
     const token = this.authService.getToken();
     const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`);
 

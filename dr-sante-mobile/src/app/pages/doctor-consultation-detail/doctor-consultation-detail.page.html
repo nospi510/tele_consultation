@@ -30,8 +30,30 @@
           </ion-chip>
         </div>
 
-        <ion-list class="chat-list">
-          <ion-item *ngFor="let message of messages" [color]="message.sender === 'Médecin' ? 'light' : 'medium'" lines="none" class="chat-item">
+        <ion-button expand="block" color="primary" (click)="proposeCall()" *ngIf="!inCall">
+          Proposer un appel vidéo
+        </ion-button>
+
+        <div class="video-call" *ngIf="inCall">
+          <video #localVideo autoplay muted playsinline class="local-video"></video>
+          <video #remoteVideo autoplay playsinline class="remote-video"></video>
+          <ion-item class="status-select" lines="none">
+            <ion-label>Statut</ion-label>
+            <ion-select [(ngModel)]="selectedStatus" (ionChange)="updateStatus()" interface="popover">
+              <ion-select-option *ngFor="let status of statusOptions" [value]="status">{{ status }}</ion-select-option>
+            </ion-select>
+          </ion-item>
+          <ion-item class="message-input" lines="none">
+            <ion-textarea [(ngModel)]="newMessage" placeholder="Écrire un diagnostic..." rows="2" (ionInput)="onTyping($event)" auto-grow></ion-textarea>
+            <ion-button slot="end" fill="clear" (click)="continueConsultation()" [disabled]="!newMessage">
+              <ion-icon name="send" color="primary"></ion-icon>
+            </ion-button>
+          </ion-item>
+          <ion-button expand="block" color="danger" (click)="endCall()">Terminer l’appel</ion-button>
+        </div>
+
+        <ion-list class="chat-list" *ngIf="!inCall">
+          <ion-item *ngFor="let message of messages" [ngClass]="message.sender === 'Médecin' ? 'chat-item doctor' : 'chat-item patient'" lines="none">
             <ion-avatar slot="start" [ngClass]="message.sender === 'Médecin' ? 'doctor-avatar' : 'patient-avatar'">
               <ion-icon [name]="message.sender === 'Médecin' ? 'medkit' : 'person'"></ion-icon>
             </ion-avatar>
@@ -46,21 +68,21 @@
           </ion-item>
         </ion-list>
 
-        <ion-item class="status-select" lines="none">
+        <ion-item class="status-select" lines="none" *ngIf="!inCall">
           <ion-label>Statut</ion-label>
           <ion-select [(ngModel)]="selectedStatus" (ionChange)="updateStatus()" interface="popover">
             <ion-select-option *ngFor="let status of statusOptions" [value]="status">{{ status }}</ion-select-option>
           </ion-select>
         </ion-item>
 
-        <ion-item class="message-input" lines="none">
+        <ion-item class="message-input" lines="none" *ngIf="!inCall">
           <ion-textarea [(ngModel)]="newMessage" placeholder="Votre message..." rows="2" (ionInput)="onTyping($event)" auto-grow></ion-textarea>
           <ion-button slot="end" fill="clear" (click)="continueConsultation()" [disabled]="!newMessage">
             <ion-icon name="send" color="primary"></ion-icon>
           </ion-button>
         </ion-item>
 
-        <ion-item class="reminder-input" lines="none">
+        <ion-item class="reminder-input" lines="none" *ngIf="!inCall">
           <ion-textarea [(ngModel)]="reminderMessage" placeholder="Rappel pour le patient..." rows="2" auto-grow></ion-textarea>
           <ion-button slot="end" fill="clear" (click)="sendReminder()" [disabled]="!reminderMessage">
             <ion-icon name="alarm" color="success"></ion-icon>

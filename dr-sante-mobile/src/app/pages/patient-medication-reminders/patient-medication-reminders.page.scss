@@ -1,0 +1,86 @@
+.reminders-background {
+    --background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
+    height: 100%;
+  }
+  
+  .reminders-container {
+    padding: 20px;
+  }
+  
+  .header-gradient {
+    --background: linear-gradient(90deg, #1e3a8a 0%, #3b82f6 100%);
+    --color: white;
+  
+    .back-btn {
+      --color: white;
+      font-size: 1.5rem;
+      transition: transform 0.2s ease;
+  
+      &:hover {
+        transform: scale(1.1);
+      }
+    }
+  }
+  
+  .reminder-card {
+    border-radius: 15px;
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+    background: rgba(255, 255, 255, 0.95);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    animation: fade-in 0.5s ease-in-out;
+  
+    &:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15);
+    }
+  
+    .card-header {
+      background: linear-gradient(135deg, #10b981, #34d399);
+      border-radius: 15px 15px 0 0;
+      padding: 15px;
+      text-align: center;
+  
+      .medication-title {
+        color: white;
+        font-size: 1.4rem;
+        font-weight: 600;
+      }
+  
+      .dosage-text {
+        color: #d1fae5;
+        font-size: 1rem;
+        margin-top: 5px;
+      }
+    }
+  
+    .card-content {
+      padding: 15px;
+  
+      .time-item, .sent-item {
+        --background: transparent;
+        margin-bottom: 10px;
+  
+        .info-icon {
+          color: #10b981;
+          font-size: 1.3rem;
+          margin-right: 10px;
+        }
+  
+        ion-label {
+          color: #1f2937;
+          font-size: 0.95rem;
+        }
+      }
+    }
+  }
+  
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+      transform: scale(0.95);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }

@@ -1,26 +1,51 @@
-<ion-header>
-  <ion-toolbar color="primary">
-    <ion-title>Rendez-vous à Venir</ion-title>
+<ion-header translucent>
+  <ion-toolbar class="header-gradient">
     <ion-buttons slot="start">
-      <ion-back-button (click)="goToHome()"></ion-back-button>
+      <ion-back-button (click)="goToHome()" class="back-btn" defaultHref="/doctor-dashboard"></ion-back-button>
     </ion-buttons>
+    <ion-title>Rendez-vous à Venir</ion-title>
   </ion-toolbar>
 </ion-header>
 
-<ion-content class="ion-padding">
-  <ion-list>
-    <ion-item *ngFor="let appointment of appointments">
-      <ion-label>
-        <h2>Patient : {{ appointment.patient_name }}</h2>
-        <p>Médecin : {{ appointment.doctor_name }}</p>
-        <p>Date : {{ appointment.appointment_date | date:'medium' }}</p>
-        <ion-select [(ngModel)]="appointment.status" (ionChange)="updateStatus(appointment)">
-          <ion-select-option *ngFor="let status of statusOptions" [value]="status">{{ status }}</ion-select-option>
-        </ion-select>
-      </ion-label>
-      <ion-button slot="end" color="danger" (click)="cancelAppointment(appointment.id)">
-        Annuler
-      </ion-button>
-    </ion-item>
-  </ion-list>
+<ion-content class="ion-padding doctor-appointments-background">
+  <div class="appointments-container">
+    <ion-grid>
+      <ion-row>
+        <ion-col size="12" size-md="6" size-lg="4" *ngFor="let appointment of appointments">
+          <ion-card class="appointment-card">
+            <ion-card-header class="card-header">
+              <ion-card-title class="patient-title">
+                {{ appointment.patient_name }}
+              </ion-card-title>
+              <ion-card-subtitle class="doctor-text">
+                {{ appointment.doctor_name }}
+              </ion-card-subtitle>
+            </ion-card-header>
+            <ion-card-content class="card-content">
+              <ion-item lines="none" class="date-item">
+                <ion-icon name="calendar-outline" slot="start" class="info-icon"></ion-icon>
+                <ion-label>{{ appointment.appointment_date | date:'medium' }}</ion-label>
+              </ion-item>
+              <ion-item class="status-item" lines="none">
+                <ion-icon name="checkmark-circle-outline" slot="start" class="info-icon"></ion-icon>
+                <ion-select 
+                  [(ngModel)]="appointment.status" 
+                  (ionChange)="updateStatus(appointment)" 
+                  placeholder="Changer le statut"
+                >
+                  <ion-select-option value="scheduled">Scheduled</ion-select-option>
+                  <ion-select-option value="planifié">Planifié</ion-select-option>
+                  <ion-select-option value="terminé">Terminé</ion-select-option>
+                </ion-select>
+              </ion-item>
+              <ion-button expand="block" class="cancel-button" (click)="cancelAppointment(appointment.id)">
+                Annuler
+                <ion-icon name="close-outline" slot="end"></ion-icon>
+              </ion-button>
+            </ion-card-content>
+          </ion-card>
+        </ion-col>
+      </ion-row>
+    </ion-grid>
+  </div>
 </ion-content>

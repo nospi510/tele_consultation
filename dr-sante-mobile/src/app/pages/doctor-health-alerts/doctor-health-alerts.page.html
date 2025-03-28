@@ -1,19 +1,32 @@
-<ion-header>
-  <ion-toolbar color="primary">
-    <ion-title>Alertes de Santé</ion-title>
+<ion-header translucent>
+  <ion-toolbar class="header-gradient">
     <ion-buttons slot="start">
-      <ion-back-button (click)="goToHome()"></ion-back-button>
+      <ion-back-button (click)="goToHome()" class="back-btn" defaultHref="/doctor-dashboard"></ion-back-button>
     </ion-buttons>
+    <ion-title>Alertes de Santé</ion-title>
   </ion-toolbar>
 </ion-header>
 
-<ion-content class="ion-padding">
-  <ion-list>
-    <ion-item *ngFor="let alert of alerts" button (click)="goToConsultationDetail(alert.consultation_id)">
-      <ion-label>
-        <h2>Patient : {{ alert.patient_name }}</h2>
-        <p>Symptômes : {{ alert.symptoms }}</p>
-      </ion-label>
-    </ion-item>
-  </ion-list>
+<ion-content class="ion-padding alerts-background">
+  <div class="alerts-container">
+    <ion-grid>
+      <ion-row>
+        <ion-col size="12" size-md="6" size-lg="4" *ngFor="let alert of alerts">
+          <ion-card class="alert-card" button (click)="goToConsultationDetail(alert.consultation_id)">
+            <ion-card-header class="card-header">
+              <ion-card-title class="patient-title">
+                {{ alert.patient_name }}
+              </ion-card-title>
+            </ion-card-header>
+            <ion-card-content class="card-content">
+              <ion-item lines="none" class="symptom-item">
+                <ion-icon name="alert-circle-outline" slot="start" class="alert-icon"></ion-icon>
+                <ion-label>{{ alert.symptoms | slice:0:40 }}{{ alert.symptoms.length > 40 ? '...' : '' }}</ion-label>
+              </ion-item>
+            </ion-card-content>
+          </ion-card>
+        </ion-col>
+      </ion-row>
+    </ion-grid>
+  </div>
 </ion-content>
