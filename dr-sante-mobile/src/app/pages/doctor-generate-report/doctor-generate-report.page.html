@@ -1,46 +1,62 @@
-<ion-header>
-  <ion-toolbar color="primary">
-    <ion-title>Générer un Rapport</ion-title>
+<ion-header translucent>
+  <ion-toolbar class="header-gradient">
     <ion-buttons slot="start">
-      <ion-back-button (click)="goToHome()"></ion-back-button>
+      <ion-back-button (click)="goToHome()" class="back-btn" defaultHref="/doctor-dashboard"></ion-back-button>
     </ion-buttons>
+    <ion-title>Générer un Rapport</ion-title>
   </ion-toolbar>
 </ion-header>
 
-<ion-content class="ion-padding">
-  <ion-card>
-    <ion-card-header>
-      <ion-card-title>Sélectionner un Patient</ion-card-title>
-    </ion-card-header>
-    <ion-card-content>
-      <ion-item>
-        <ion-label>Patient</ion-label>
-        <ion-select [(ngModel)]="patientId" placeholder="Choisir un patient">
-          <ion-select-option *ngFor="let patient of patients" [value]="patient.id">
-            {{ patient.fullname }} ({{ patient.email }})
-          </ion-select-option>
-        </ion-select>
-      </ion-item>
-      <ion-button expand="block" color="secondary" (click)="generateReport()" [disabled]="!patientId">
-        Générer Rapport
-      </ion-button>
-    </ion-card-content>
-  </ion-card>
+<ion-content class="ion-padding report-background">
+  <div class="report-container">
+    <!-- Sélection du patient -->
+    <ion-card class="selection-card">
+      <ion-card-header class="card-header">
+        <ion-card-title class="title-gradient">Sélectionner un Patient</ion-card-title>
+        <ion-card-subtitle>Choisissez pour générer un rapport</ion-card-subtitle>
+      </ion-card-header>
+      <ion-card-content class="selection-content">
+        <form (ngSubmit)="generateReport()">
+          <ion-item class="input-item" lines="none">
+            <ion-icon name="person-outline" slot="start" class="input-icon"></ion-icon>
+            <ion-label>Patient</ion-label>
+            <ion-select [(ngModel)]="patientId" name="patientId" placeholder="Choisir un patient" required>
+              <ion-select-option *ngFor="let patient of patients" [value]="patient.id">
+                {{ patient.fullname }} ({{ patient.email }})
+              </ion-select-option>
+            </ion-select>
+          </ion-item>
+          <ion-button expand="block" type="submit" class="generate-button" [disabled]="!patientId">
+            Générer Rapport
+            <ion-icon name="document-text-outline" slot="end"></ion-icon>
+          </ion-button>
+        </form>
+      </ion-card-content>
+    </ion-card>
 
-  <ion-card *ngIf="report">
-    <ion-card-header>
-      <ion-card-title>Rapport pour {{ report.patient_name }}</ion-card-title>
-    </ion-card-header>
-    <ion-card-content>
-      <ion-list>
-        <ion-item *ngFor="let consultation of report.consultations">
-          <ion-label>
-            <h2>Symptômes : {{ consultation.symptoms }}</h2>
-            <p>Diagnostic : {{ consultation.diagnosis || 'En attente' }}</p>
-            <p>Date : {{ consultation.created_at | date:'medium' }}</p>
-          </ion-label>
-        </ion-item>
-      </ion-list>
-    </ion-card-content>
-  </ion-card>
+    <!-- Rapport généré -->
+    <ion-card class="report-card" *ngIf="report">
+      <ion-card-header class="report-header">
+        <ion-card-title class="report-title">
+          Rapport pour {{ report.patient_name }}
+        </ion-card-title>
+      </ion-card-header>
+      <ion-card-content class="report-content">
+        <ion-grid>
+          <ion-row>
+            <ion-col size="12" *ngFor="let consultation of report.consultations">
+              <ion-item class="consultation-item" lines="none">
+                <ion-icon name="pulse-outline" slot="start" class="consultation-icon"></ion-icon>
+                <ion-label>
+                  <h2>{{ consultation.symptoms }}</h2>
+                  <p>Diagnostic : {{ consultation.diagnosis || 'En attente' }}</p>
+                  <p>Date : {{ consultation.created_at | date:'medium' }}</p>
+                </ion-label>
+              </ion-item>
+            </ion-col>
+          </ion-row>
+        </ion-grid>
+      </ion-card-content>
+    </ion-card>
+  </div>
 </ion-content>

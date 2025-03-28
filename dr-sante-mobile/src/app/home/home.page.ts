@@ -64,4 +64,8 @@ export class HomePage implements OnInit {
   goToUpcomingAppointments() {
     this.router.navigate(['/upcoming-appointments']);
   }
+
+  goToMedicationReminders() {
+    this.router.navigate(['/patient-medication-reminders']);
+  }
 }

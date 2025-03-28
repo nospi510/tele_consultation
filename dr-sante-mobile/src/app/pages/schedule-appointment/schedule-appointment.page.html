@@ -1,35 +1,59 @@
-<ion-header>
-  <ion-toolbar color="primary">
+<ion-header translucent>
+  <ion-toolbar class="header-gradient">
     <ion-title>Planifier un Rendez-vous</ion-title>
     <ion-buttons slot="end">
-      <ion-button (click)="goToHome()">
+      <ion-button (click)="goToHome()" class="home-btn">
         <ion-icon name="home-outline"></ion-icon>
       </ion-button>
     </ion-buttons>
   </ion-toolbar>
 </ion-header>
 
-<ion-content class="ion-padding">
-  <ion-card>
-    <ion-card-header>
-      <ion-card-title>Nouveau Rendez-vous</ion-card-title>
-    </ion-card-header>
-    <ion-card-content>
-      <ion-item>
-        <ion-label>Médecin</ion-label>
-        <ion-select [(ngModel)]="doctorId" placeholder="Choisir un médecin">
-          <ion-select-option *ngFor="let doctor of doctors" [value]="doctor.id">
-            {{ doctor.fullname }} ({{ doctor.email }})
-          </ion-select-option>
-        </ion-select>
-      </ion-item>
-      <ion-item>
-        <ion-label>Date et heure</ion-label>
-        <ion-datetime [(ngModel)]="appointmentDate" displayFormat="YYYY-MM-DD HH:mm" placeholder="Choisir une date"></ion-datetime>
-      </ion-item>
-      <ion-button expand="block" color="success" (click)="scheduleAppointment()" [disabled]="!doctorId || !appointmentDate">
-        Planifier
-      </ion-button>
-    </ion-card-content>
-  </ion-card>
+<ion-content class="ion-padding schedule-background">
+  <div class="schedule-container">
+    <ion-card class="schedule-card">
+      <ion-card-header class="card-header">
+        <ion-card-title class="title-gradient">Nouveau Rendez-vous</ion-card-title>
+        <ion-card-subtitle>Planifiez avec un médecin</ion-card-subtitle>
+      </ion-card-header>
+      <ion-card-content class="schedule-content">
+        <form (ngSubmit)="scheduleAppointment()">
+          <ion-item class="input-item" lines="none">
+            <ion-icon name="person-outline" slot="start" class="input-icon"></ion-icon>
+            <ion-label>Médecin</ion-label>
+            <ion-select [(ngModel)]="doctorId" name="doctorId" placeholder="Choisir un médecin" required>
+              <ion-select-option *ngFor="let doctor of doctors" [value]="doctor.id">
+                {{ doctor.fullname }} ({{ doctor.email }})
+              </ion-select-option>
+            </ion-select>
+          </ion-item>
+          <ion-item class="input-item" lines="none">
+            <ion-icon name="calendar-outline" slot="start" class="input-icon"></ion-icon>
+            <ion-label>Date et heure</ion-label>
+            <ion-input 
+              value="{{ appointmentDate | date:'yyyy-MM-dd HH:mm' }}" 
+              placeholder="Choisir une date" 
+              readonly 
+              (click)="toggleDatePicker()"
+            ></ion-input>
+            <ion-popover trigger="date-picker-trigger" [isOpen]="isDatePickerOpen" (didDismiss)="isDatePickerOpen = false">
+              <ng-template>
+                <ion-datetime 
+                  [(ngModel)]="appointmentDate" 
+                  name="appointmentDate" 
+                  displayFormat="YYYY-MM-DD HH:mm" 
+                  presentation="date-time"
+                  (ionChange)="onDateChange()"
+                ></ion-datetime>
+              </ng-template>
+            </ion-popover>
+          </ion-item>
+          <ion-button expand="block" type="submit" class="schedule-button" [disabled]="!doctorId || !appointmentDate">
+            Planifier
+            <ion-icon name="calendar-number-outline" slot="end"></ion-icon>
+          </ion-button>
+        </form>
+      </ion-card-content>
+    </ion-card>
+  </div>
 </ion-content>

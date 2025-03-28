@@ -1,34 +1,47 @@
-<ion-header>
-  <ion-toolbar color="primary">
+<ion-header translucent>
+  <ion-toolbar class="header-gradient">
     <ion-title>Bienvenue, {{ user.fullname || 'Utilisateur' }}</ion-title>
     <ion-buttons slot="end">
-      <ion-button (click)="logout()">
+      <ion-button (click)="logout()" class="logout-btn">
         <ion-icon name="log-out-outline"></ion-icon>
       </ion-button>
     </ion-buttons>
   </ion-toolbar>
 </ion-header>
 
-<ion-content class="ion-padding">
-  <ion-card>
-    <ion-card-header>
-      <ion-card-title>Votre tableau de bord</ion-card-title>
-    </ion-card-header>
-    <ion-card-content>
-      <p>Email : {{ user.email }}</p>
-      <p>Rôle : {{ user.role }}</p>
-      <ion-button expand="block" color="success" (click)="goToConsultation()">
-        Démarrer une consultation
-      </ion-button>
-      <ion-button expand="block" color="primary" (click)="goToConsultationHistory()">
-        Historique des consultations
-      </ion-button>
-      <ion-button expand="block" color="secondary" (click)="goToScheduleAppointment()">
-        Planifier un rendez-vous
-      </ion-button>
-      <ion-button expand="block" color="tertiary" (click)="goToUpcomingAppointments()">
-        Rendez-vous à venir
-      </ion-button>
-    </ion-card-content>
-  </ion-card>
+<ion-content class="ion-padding home-background">
+  <div class="dashboard-container">
+    <ion-card class="dashboard-card">
+      <ion-card-header class="card-header">
+        <ion-card-title class="title-gradient">Votre tableau de bord</ion-card-title>
+        <ion-card-subtitle class="user-info">
+          <span>{{ user.email }}</span> | <span>{{ user.role }}</span>
+        </ion-card-subtitle>
+      </ion-card-header>
+      <ion-card-content class="dashboard-content">
+        <div class="action-grid">
+          <ion-card class="action-card" (click)="goToConsultation()">
+            <ion-icon name="medkit-outline" class="action-icon"></ion-icon>
+            <ion-label>Démarrer une consultation</ion-label>
+          </ion-card>
+          <ion-card class="action-card" (click)="goToConsultationHistory()">
+            <ion-icon name="time-outline" class="action-icon"></ion-icon>
+            <ion-label>Historique</ion-label>
+          </ion-card>
+          <ion-card class="action-card" (click)="goToScheduleAppointment()">
+            <ion-icon name="calendar-outline" class="action-icon"></ion-icon>
+            <ion-label>Planifier</ion-label>
+          </ion-card>
+          <ion-card class="action-card" (click)="goToUpcomingAppointments()">
+            <ion-icon name="alarm-outline" class="action-icon"></ion-icon>
+            <ion-label>Rendez-vous</ion-label>
+          </ion-card>
+          <ion-card class="action-card" (click)="goToMedicationReminders()">
+            <ion-icon name="pill-outline" class="action-icon"></ion-icon>
+            <ion-label>Rappels</ion-label>
+          </ion-card>
+        </div>
+      </ion-card-content>
+    </ion-card>
+  </div>
 </ion-content>

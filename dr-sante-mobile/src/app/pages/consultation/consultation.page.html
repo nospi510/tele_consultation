@@ -1,49 +1,76 @@
-<ion-header>
-  <ion-toolbar color="primary">
-    <ion-title>Consultation #{{ consultationId || 'Nouvelle' }}</ion-title>
+<ion-header translucent>
+  <ion-toolbar class="header-gradient">
     <ion-buttons slot="start">
-      <ion-back-button (click)="goToHome()"></ion-back-button>
+      <ion-back-button (click)="goToHome()" class="back-btn" defaultHref="/home"></ion-back-button>
     </ion-buttons>
+    <ion-title>Consultation #{{ consultationId || 'Nouvelle' }}</ion-title>
   </ion-toolbar>
 </ion-header>
 
-<ion-content class="ion-padding">
-  <ion-card>
-    <ion-card-header>
-      <ion-card-title>Détails de la Consultation</ion-card-title>
-    </ion-card-header>
-    <ion-card-content>
-      <p *ngIf="consultationStarted"><strong>Symptômes :</strong> {{ consultation.symptoms }}</p>
-      <p *ngIf="consultationStarted"><strong>Diagnostic :</strong> {{ consultation.diagnosis || 'En attente' }}</p>
-      <p *ngIf="consultationStarted"><strong>Statut :</strong> {{ consultation.status }}</p>
-      
-      <ion-list class="chat-list" *ngIf="consultationStarted">
-        <ion-item *ngFor="let message of messages" [color]="message.sender === 'Patient' ? 'light' : 'medium'">
-          <ion-label class="chat-message">
-            <strong>{{ message.sender }} :</strong> {{ message.text }}
-          </ion-label>
-        </ion-item>
-        <ion-item *ngIf="isDoctorTyping" color="tertiary">
-          <ion-label>Médecin est en train d’écrire...</ion-label>
-        </ion-item>
-      </ion-list>
+<ion-content class="ion-padding consultation-background">
+  <div class="consultation-container">
+    <ion-card class="consultation-card">
+      <ion-card-header class="card-header">
+        <ion-card-title class="title-gradient">Détails de la Consultation</ion-card-title>
+      </ion-card-header>
+      <ion-card-content class="consultation-content">
+        <!-- Détails consultation (affichés après démarrage) -->
+        <div class="consultation-details" *ngIf="consultationStarted">
+          <ion-item lines="none" class="detail-item">
+            <ion-icon name="pulse-outline" slot="start" class="detail-icon"></ion-icon>
+            <ion-label><strong>Symptômes :</strong> {{ consultation.symptoms }}</ion-label>
+          </ion-item>
+          <ion-item lines="none" class="detail-item">
+            <ion-icon name="document-text-outline" slot="start" class="detail-icon"></ion-icon>
+            <ion-label><strong>Diagnostic :</strong> {{ consultation.diagnosis || 'En attente' }}</ion-label>
+          </ion-item>
+          <ion-item lines="none" class="detail-item">
+            <ion-icon name="checkmark-circle-outline" slot="start" class="detail-icon"></ion-icon>
+            <ion-label><strong>Statut :</strong> {{ consultation.status }}</ion-label>
+          </ion-item>
+        </div>
 
-      <ion-item *ngIf="!consultationStarted">
-        <ion-label position="floating">Décrivez vos symptômes</ion-label>
-        <ion-textarea [(ngModel)]="symptoms" rows="3"></ion-textarea>
-      </ion-item>
-      <ion-button *ngIf="!consultationStarted" expand="block" color="primary" (click)="startConsultation()" [disabled]="!symptoms || isLoading">
-        <ion-spinner *ngIf="isLoading"></ion-spinner>
-        {{ isLoading ? 'Recherche de médecin... ' + countdown + 's' : 'Démarrer Consultation' }}
-      </ion-button>
+        <!-- Chat (affiché après démarrage) -->
+        <ion-list class="chat-list" *ngIf="consultationStarted">
+          <ion-item *ngFor="let message of messages" [ngClass]="{'patient-message': message.sender === 'Patient', 'doctor-message': message.sender !== 'Patient'}">
+            <ion-label class="chat-message">
+              <strong>{{ message.sender }} :</strong> {{ message.text }}
+            </ion-label>
+          </ion-item>
+          <ion-item *ngIf="isDoctorTyping" class="typing-indicator">
+            <ion-icon name="ellipsis-horizontal" slot="start" class="typing-icon"></ion-icon>
+            <ion-label>Médecin est en train d’écrire...</ion-label>
+          </ion-item>
+        </ion-list>
 
-      <ion-item *ngIf="consultationStarted">
-        <ion-label position="floating">Nouveau Message</ion-label>
-        <ion-textarea [(ngModel)]="newMessage" rows="3" (input)="onTyping($event)"></ion-textarea>
-      </ion-item>
-      <ion-button *ngIf="consultationStarted" expand="block" color="primary" (click)="continueConsultation()" [disabled]="!newMessage">
-        Envoyer Message
-      </ion-button>
-    </ion-card-content>
-  </ion-card>
+        <!-- Formulaire avant démarrage -->
+        <div class="start-section" *ngIf="!consultationStarted">
+          <ion-item class="input-item" lines="none">
+            <ion-icon name="pulse-outline" slot="start" class="input-icon"></ion-icon>
+            <ion-label position="floating">Décrivez vos symptômes</ion-label>
+            <ion-textarea [(ngModel)]="symptoms" rows="4" placeholder="Ex: Maux de tête, fièvre..." required></ion-textarea>
+          </ion-item>
+          <ion-button expand="block" class="start-button" (click)="startConsultation()" [disabled]="!symptoms || isLoading">
+            <ion-spinner *ngIf="isLoading" name="dots"></ion-spinner>
+            <span *ngIf="isLoading">Recherche de médecin... {{ countdown }}s</span>
+            <span *ngIf="!isLoading">Démarrer Consultation</span>
+            <ion-icon name="play-outline" slot="end" *ngIf="!isLoading"></ion-icon>
+          </ion-button>
+        </div>
+
+        <!-- Formulaire message après démarrage -->
+        <div class="message-section" *ngIf="consultationStarted">
+          <ion-item class="input-item" lines="none">
+            <ion-icon name="chatbubble-outline" slot="start" class="input-icon"></ion-icon>
+            <ion-label position="floating">Nouveau Message</ion-label>
+            <ion-textarea [(ngModel)]="newMessage" rows="3" placeholder="Tapez votre message..." (input)="onTyping($event)"></ion-textarea>
+          </ion-item>
+          <ion-button expand="block" class="send-button" (click)="continueConsultation()" [disabled]="!newMessage">
+            Envoyer Message
+            <ion-icon name="send-outline" slot="end"></ion-icon>
+          </ion-button>
+        </div>
+      </ion-card-content>
+    </ion-card>
+  </div>
 </ion-content>
