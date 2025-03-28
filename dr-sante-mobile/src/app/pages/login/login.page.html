@@ -1,29 +1,40 @@
-<ion-header>
-  <ion-toolbar color="primary">
+<ion-header translucent>
+  <ion-toolbar class="header-gradient">
     <ion-title>Connexion - Dr Santé</ion-title>
   </ion-toolbar>
 </ion-header>
 
-<ion-content class="ion-padding">
-  <ion-card>
-    <ion-card-header>
-      <ion-card-title>Se connecter</ion-card-title>
-    </ion-card-header>
-    <ion-card-content>
-      <ion-item>
-        <ion-label position="floating">Email</ion-label>
-        <ion-input [(ngModel)]="email" type="email" required></ion-input>
-      </ion-item>
-      <ion-item>
-        <ion-label position="floating">Mot de passe</ion-label>
-        <ion-input [(ngModel)]="password" type="password" required></ion-input>
-      </ion-item>
-      <ion-button expand="block" color="primary" (click)="login()" class="ion-margin-top">
-        Connexion
-      </ion-button>
-      <ion-button expand="block" fill="clear" (click)="goToRegister()">
-        Pas de compte ? Inscrivez-vous
-      </ion-button>
-    </ion-card-content>
-  </ion-card>
+<ion-content class="ion-padding login-background">
+  <div class="login-container">
+    <ion-card class="login-card">
+      <ion-card-header class="card-header">
+        <ion-card-title class="title-gradient">Se connecter</ion-card-title>
+        <ion-card-subtitle>Bienvenue sur Dr Santé</ion-card-subtitle>
+      </ion-card-header>
+      <ion-card-content>
+        <form (ngSubmit)="login()" class="login-form">
+          <ion-item class="input-item" lines="none">
+            <ion-icon name="mail-outline" slot="start" class="input-icon"></ion-icon>
+            <ion-label position="floating">Email</ion-label>
+            <ion-input [(ngModel)]="email" name="email" type="email" required placeholder="votre@email.com"></ion-input>
+          </ion-item>
+          <ion-item class="input-item" lines="none">
+            <ion-icon name="lock-closed-outline" slot="start" class="input-icon"></ion-icon>
+            <ion-label position="floating">Mot de passe</ion-label>
+            <ion-input [(ngModel)]="password" name="password" type="password" required placeholder="••••••••"></ion-input>
+          </ion-item>
+          <ion-button expand="block" type="submit" class="login-button">
+            Connexion
+            <ion-icon name="log-in-outline" slot="end"></ion-icon>
+          </ion-button>
+        </form>
+        <div class="register-link">
+          <ion-text>Pas de compte ?</ion-text>
+          <ion-button fill="clear" (click)="goToRegister()" class="link-button">
+            Inscrivez-vous
+          </ion-button>
+        </div>
+      </ion-card-content>
+    </ion-card>
+  </div>
 </ion-content>

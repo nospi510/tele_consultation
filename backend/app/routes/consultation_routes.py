@@ -5,7 +5,7 @@ from app.models.consultation import Consultation, Appointment
 from app.models.user import User
 from flasgger import swag_from
 from app.services.ollama_service import get_ai_diagnosis, get_ai_health_tips
-from flask_socketio import join_room
+from flask_socketio import join_room, emit
 
 consultation_bp = Blueprint("consultation", __name__)
 
@@ -41,6 +41,39 @@ def handle_join(data):
     join_room(str(consultation_id))
     socketio.emit('room_joined', {'consultation_id': consultation_id}, room=str(consultation_id))
 
+
+# Événements Socket.IO pour WebRTC
+@socketio.on('propose_call')
+def handle_propose_call(data):
+    consultation_id = data['consultation_id']
+    doctor_id = data['doctor_id']
+    print(f"Appel proposé pour consultation {consultation_id} par docteur {doctor_id}")  # Log
+    emit('call_proposed', {'consultation_id': consultation_id, 'doctor_id': doctor_id}, room=str(consultation_id))
+
+@socketio.on('join_call')
+def handle_join_call(data):
+    consultation_id = data['consultation_id']
+    join_room(str(consultation_id))
+    emit('call_joined', {'user_id': data['user_id']}, room=str(consultation_id))
+
+@socketio.on('webrtc_offer')
+def handle_webrtc_offer(data):
+    consultation_id = data['consultation_id']
+    print(f"Offre WebRTC reçue pour {consultation_id}: {data['sdp']}")  # Log
+    emit('webrtc_offer', data, room=str(consultation_id), include_self=False)
+
+@socketio.on('webrtc_answer')
+def handle_webrtc_answer(data):
+    consultation_id = data['consultation_id']
+    print(f"Réponse WebRTC reçue pour {consultation_id}: {data['sdp']}")  # Log
+    emit('webrtc_answer', data, room=str(consultation_id), include_self=False)
+
+
+@socketio.on('webrtc_ice_candidate')
+def handle_webrtc_ice_candidate(data):
+    consultation_id = data['consultation_id']
+    print(f"ICE candidate reçu pour {consultation_id}: {data['candidate']}")  # Log
+    emit('webrtc_ice_candidate', data, room=str(consultation_id), include_self=False)
 
 @consultation_bp.route("/", methods=["POST"])
 @jwt_required()
@@ -1096,6 +1129,59 @@ def send_medication_reminder():
         "reminder": reminder_message
     }), 200
 
+@consultation_bp.route("/patient/medication-reminders", methods=["GET"])
+@jwt_required()
+@swag_from({
+    'tags': ['Patients'],
+    'summary': 'Obtenir les rappels de médicaments du patient',
+    'description': 'Permet à un patient de voir les rappels de médicaments qui lui ont été envoyés par un médecin ou l’IA.',
+    'security': [{'BearerAuth': []}],
+    'responses': {
+        '200': {
+            'description': 'Liste des rappels de médicaments',
+            'schema': {
+                'type': 'array',
+                'items': {
+                    'type': 'object',
+                    'properties': {
+                        'consultation_id': {'type': 'integer'},
+                        'medication_name': {'type': 'string'},
+                        'dosage': {'type': 'string'},
+                        'time': {'type': 'string'},
+                        'sent_at': {'type': 'string', 'format': 'date-time'}
+                    }
+                }
+            }
+        },
+        '401': {'description': 'Non autorisé (JWT manquant ou invalide)'},
+        '403': {'description': 'Accès refusé (Utilisateur non patient)'}
+    }
+})
+def get_patient_medication_reminders():
+    # Récupère l'ID de l'utilisateur authentifié
+    user_id = get_jwt_identity()
+    user = User.query.get(user_id)
+
+    # Vérifie si l'utilisateur est un patient
+    if not user or user.role != "patient":
+        return jsonify({"error": "Accès refusé. Seuls les patients peuvent voir leurs rappels."}), 403
+
+    # Récupère les consultations avec rappels pour ce patient
+    consultations = Consultation.query.filter_by(user_id=user_id, medication_reminder_sent=True).all()
+
+    # Formate la réponse
+    reminders_data = [{
+        "consultation_id": consultation.id,
+        "medication_name": consultation.medication_name,
+        "dosage": consultation.medication_dosage,
+        "time": consultation.medication_reminder_time,
+        "sent_at": consultation.updated_at.isoformat() if consultation.updated_at else None
+    } for consultation in consultations]
+
+    return jsonify(reminders_data), 200
+
+
+
 @consultation_bp.route("/generate-report/<int:patient_id>", methods=["GET"])
 @jwt_required()
 @swag_from({
@@ -1317,9 +1403,9 @@ def get_upcoming_appointments():
 
     # Récupère les rendez-vous à venir
     if user.role == "patient":
-        appointments = Appointment.query.filter_by(patient_id=user_id, status="planifié").all()
+            appointments = Appointment.query.filter_by(patient_id=user_id).all()
     elif user.role == "doctor":
-        appointments = Appointment.query.filter_by(doctor_id=user_id, status="planifié").all()
+        appointments = Appointment.query.filter_by(doctor_id=user_id).all()
     else:
         return jsonify({"error": "Accès refusé. Seuls les patients ou les médecins peuvent voir leurs rendez-vous."}), 403
 

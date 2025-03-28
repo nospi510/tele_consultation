@@ -20,6 +20,7 @@ const routes: Routes = [
   { path: 'doctor/generate-report', loadChildren: () => import('./pages/doctor-generate-report/doctor-generate-report.module').then(m => m.DoctorGenerateReportPageModule) },
   { path: 'doctor/send-notification', loadChildren: () => import('./pages/doctor-send-notification/doctor-send-notification.module').then(m => m.DoctorSendNotificationPageModule) },
   { path: 'doctor/upcoming-appointments', loadChildren: () => import('./pages/doctor-upcoming-appointments/doctor-upcoming-appointments.module').then(m => m.DoctorUpcomingAppointmentsPageModule) },
+  { path: 'patient-medication-reminders',loadChildren: () => import('./pages/patient-medication-reminders/patient-medication-reminders.module').then( m => m.PatientMedicationRemindersPageModule)},
 ];
 
 @NgModule({

@@ -1,23 +1,41 @@
-<ion-header>
-  <ion-toolbar color="primary">
+<ion-header translucent>
+  <ion-toolbar class="header-gradient">
     <ion-title>Historique des Consultations</ion-title>
     <ion-buttons slot="end">
-      <ion-button (click)="goToHome()">
+      <ion-button (click)="goToHome()" class="home-btn">
         <ion-icon name="home-outline"></ion-icon>
       </ion-button>
     </ion-buttons>
   </ion-toolbar>
 </ion-header>
 
-<ion-content class="ion-padding">
-  <ion-list>
-    <ion-item *ngFor="let consultation of consultations" button (click)="goToConsultationDetail(consultation.id)">
-      <ion-label>
-        <h2>Symptômes : {{ consultation.symptoms }}</h2>
-        <p>Diagnostic : {{ consultation.diagnosis || 'En attente' }}</p>
-        <p>Date : {{ consultation.created_at | date:'medium' }}</p>
-        <p>Type : {{ consultation.is_ai_diagnosis ? 'IA' : 'Médecin' }}</p>
-      </ion-label>
-    </ion-item>
-  </ion-list>
+<ion-content class="ion-padding history-background">
+  <div class="history-container">
+    <ion-grid>
+      <ion-row>
+        <ion-col size="12" size-md="6" size-lg="4" *ngFor="let consultation of consultations">
+          <ion-card class="history-card" button (click)="goToConsultationDetail(consultation.id)">
+            <ion-card-header class="card-header">
+              <ion-card-title class="symptom-title">
+                {{ consultation.symptoms | slice:0:30 }}{{ consultation.symptoms.length > 30 ? '...' : '' }}
+              </ion-card-title>
+              <ion-card-subtitle class="diagnosis-text">
+                {{ consultation.diagnosis || 'En attente' }}
+              </ion-card-subtitle>
+            </ion-card-header>
+            <ion-card-content class="card-content">
+              <ion-item lines="none" class="info-item">
+                <ion-icon name="calendar-outline" slot="start" class="info-icon"></ion-icon>
+                <ion-label>{{ consultation.created_at | date:'medium' }}</ion-label>
+              </ion-item>
+              <ion-item lines="none" class="info-item">
+                <ion-icon [name]="consultation.is_ai_diagnosis ? 'bulb-outline' : 'person-outline'" slot="start" class="info-icon"></ion-icon>
+                <ion-label>{{ consultation.is_ai_diagnosis ? 'IA' : 'Médecin' }}</ion-label>
+              </ion-item>
+            </ion-card-content>
+          </ion-card>
+        </ion-col>
+      </ion-row>
+    </ion-grid>
+  </div>
 </ion-content>

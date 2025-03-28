@@ -1,33 +1,47 @@
-<ion-header>
-  <ion-toolbar color="primary">
-    <ion-title>Envoyer une Notification</ion-title>
+<ion-header translucent>
+  <ion-toolbar class="header-gradient">
     <ion-buttons slot="start">
-      <ion-back-button (click)="goToHome()"></ion-back-button>
+      <ion-back-button (click)="goToHome()" class="back-btn" defaultHref="/doctor-dashboard"></ion-back-button>
     </ion-buttons>
+    <ion-title>Envoyer une Notification</ion-title>
   </ion-toolbar>
 </ion-header>
 
-<ion-content class="ion-padding">
-  <ion-card>
-    <ion-card-header>
-      <ion-card-title>Notification Personnalisée</ion-card-title>
-    </ion-card-header>
-    <ion-card-content>
-      <ion-item>
-        <ion-label>Patient</ion-label>
-        <ion-select [(ngModel)]="patientId" placeholder="Choisir un patient">
-          <ion-select-option *ngFor="let patient of patients" [value]="patient.id">
-            {{ patient.fullname }} ({{ patient.email }})
-          </ion-select-option>
-        </ion-select>
-      </ion-item>
-      <ion-item>
-        <ion-label position="floating">Message</ion-label>
-        <ion-textarea [(ngModel)]="message" rows="3"></ion-textarea>
-      </ion-item>
-      <ion-button expand="block" color="tertiary" (click)="sendNotification()" [disabled]="!patientId || !message">
-        Envoyer Notification
-      </ion-button>
-    </ion-card-content>
-  </ion-card>
+<ion-content class="ion-padding notification-background">
+  <div class="notification-container">
+    <ion-card class="notification-card">
+      <ion-card-header class="card-header">
+        <ion-card-title class="title-gradient">Notification Personnalisée</ion-card-title>
+        <ion-card-subtitle>Envoyez un message à un patient</ion-card-subtitle>
+      </ion-card-header>
+      <ion-card-content class="notification-content">
+        <form (ngSubmit)="sendNotification()">
+          <ion-item class="input-item" lines="none">
+            <ion-icon name="person-outline" slot="start" class="input-icon"></ion-icon>
+            <ion-label>Patient</ion-label>
+            <ion-select [(ngModel)]="patientId" name="patientId" placeholder="Choisir un patient" required>
+              <ion-select-option *ngFor="let patient of patients" [value]="patient.id">
+                {{ patient.fullname }} ({{ patient.email }})
+              </ion-select-option>
+            </ion-select>
+          </ion-item>
+          <ion-item class="input-item" lines="none">
+            <ion-icon name="chatbubble-outline" slot="start" class="input-icon"></ion-icon>
+            <ion-label position="floating">Message</ion-label>
+            <ion-textarea 
+              [(ngModel)]="message" 
+              name="message" 
+              rows="4" 
+              placeholder="Entrez votre message ici..." 
+              required
+            ></ion-textarea>
+          </ion-item>
+          <ion-button expand="block" type="submit" class="send-button" [disabled]="!patientId || !message">
+            Envoyer Notification
+            <ion-icon name="notifications-outline" slot="end"></ion-icon>
+          </ion-button>
+        </form>
+      </ion-card-content>
+    </ion-card>
+  </div>
 </ion-content>

@@ -21,6 +21,7 @@ export class DoctorMedicationReminderPage implements OnInit {
   medicationName: string = '';
   dosage: string = '';
   time: string = '';
+  isTimePickerOpen: boolean = false;
 
   constructor(
     private authService: AuthService,
@@ -46,7 +47,20 @@ export class DoctorMedicationReminderPage implements OnInit {
     );
   }
 
+  toggleTimePicker() {
+    this.isTimePickerOpen = true; // Ouvre le popover
+  }
+
+  onTimeChange() {
+    this.isTimePickerOpen = false; // Ferme le popover après sélection
+  }
+
   sendReminder() {
+    if (!this.patientId || !this.medicationName || !this.dosage || !this.time) {
+      this.showToast('Veuillez remplir tous les champs', 'warning');
+      return;
+    }
+
     const token = this.authService.getToken();
     const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`);
     this.http.post(`${environment.apiUrl}/consultation/medication-reminder`, {
@@ -72,6 +86,7 @@ export class DoctorMedicationReminderPage implements OnInit {
     this.medicationName = '';
     this.dosage = '';
     this.time = '';
+    this.isTimePickerOpen = false;
   }
 
   async showToast(message: string, color: string) {
