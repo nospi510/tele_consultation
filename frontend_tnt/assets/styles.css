@@ -4,9 +4,12 @@ body {
     font-family: 'Segoe UI', Arial, sans-serif;
     background: linear-gradient(135deg, #e6f0fa, #b3d9ff);
     color: #333;
-    width: 1280px;
-    height: 720px;
+    width: 100vw;
+    height: 100vh;
+    max-width: 1280px;
+    max-height: 720px;
     overflow: hidden;
+    
 }
 
 #app-container {
@@ -199,4 +202,52 @@ textarea {
 
 #appointments-content .appointment-card p strong {
     color: #007bff;
+}
+
+.fade-in {
+    animation: fadeIn 0.5s ease-in-out;
+}
+
+/* Styles pour la liste des chaînes */
+#channel-selection ul {
+    list-style-type: none;
+    padding: 0;
+    margin-top: 10px;
+}
+
+#channel-selection li {
+    margin: 5px 0;
+    padding: 10px;
+    background-color: #f0f4f8;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
+    color: #333;
+    transition: background-color 0.3s;
+}
+
+#channel-selection li:hover, #channel-selection li:focus {
+    background-color: #e0e7ff;
+    border-color: #007bff;
+    outline: none;
+}
+
+/* Ajustement du lecteur vidéo */
+#video-player {
+    width: 768px;
+    height: 576px;
+    border-radius: 10px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }

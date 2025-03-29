@@ -5,6 +5,8 @@
     <title>Dr Santé - Téléconsultation</title>
     <link rel="stylesheet" href="assets/styles.css" />
     <script type="text/javascript" src="scripts/main.js"></script>
+    <!-- Inclure hls.js pour lire les flux M3U -->
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 </head>
 <body onload="initApp();">
     <!-- Gestionnaire HbbTV -->
@@ -25,6 +27,8 @@
                     <button id="tips-btn" onclick="showTips()">Conseils santé</button>
                     <button id="appointment-btn" onclick="showAppointment()">Planifier un RDV</button>
                     <button id="upcoming-btn" onclick="showUpcomingAppointments()">Mes RDV à venir</button>
+                    <!-- Nouveau bouton pour la liste des chaînes -->
+                    <button id="channels-btn" onclick="showChannels()">Liste des chaînes</button>
                     <button id="logout-btn" onclick="logout()">Se déconnecter</button>
                 </div>
             </div>
@@ -39,29 +43,27 @@
         <!-- Colonne centrale : Vidéo -->
         <div id="video-panel">
             <h2>Dr Santé Live</h2>
-            <iframe width="768" height="576" 
-                src="https://www.youtube.com/embed/l8PMl7tUDIE?si=uHZxjwGFcH9eZTG7" 
-                title="YouTube video player" 
-                frameborder="0" 
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
-                referrerpolicy="strict-origin-when-cross-origin" 
-                allowfullscreen>
-            </iframe>
+            <!-- Remplacement de l’iframe par un élément vidéo -->
+            <video id="video-player" controls>
+                Votre navigateur ne supporte pas ce format vidéo.
+            </video>
         </div>
 
         <!-- Colonne droite : Contenu dynamique -->
         <div id="right-panel">
             <!-- Formulaire de connexion -->
-            <div id="login-form" style="display:none;">
+            <div id="login-form" class="fade-in" style="display:none;">
                 <h2>Connexion</h2>
+                <label for="email-input">Email :</label>
                 <input type="email" id="email-input" placeholder="Email" tabindex="0" />
+                <label for="password-input">Mot de passe :</label>
                 <input type="password" id="password-input" placeholder="Mot de passe" tabindex="0" />
                 <button onclick="submitLogin()" tabindex="0">Se connecter</button>
                 <button onclick="hideLogin()" tabindex="0">Retour</button>
             </div>
 
             <!-- Formulaire de consultation -->
-            <div id="consultation-form" style="display:none;">
+            <div id="consultation-form" class="fade-in" style="display:none;">
                 <h2>Nouvelle Consultation</h2>
                 <textarea id="symptoms-input" placeholder="Décrivez vos symptômes..." tabindex="0"></textarea>
                 <button onclick="submitConsultation()" tabindex="0">Envoyer</button>
@@ -69,21 +71,21 @@
             </div>
 
             <!-- Historique des consultations -->
-            <div id="history-view" style="display:none;">
+            <div id="history-view" class="fade-in" style="display:none;">
                 <h2>Mes Consultations</h2>
                 <div id="history-content"></div>
                 <button onclick="hideHistory()" tabindex="0">Retour</button>
             </div>
 
             <!-- Conseils de santé -->
-            <div id="tips-view" style="display:none;">
+            <div id="tips-view" class="fade-in" style="display:none;">
                 <h2>Conseils Santé</h2>
                 <p id="tips-content"></p>
                 <button onclick="hideTips()" tabindex="0">Retour</button>
             </div>
 
             <!-- Formulaire de planification de rendez-vous -->
-            <div id="appointment-form" style="display:none;">
+            <div id="appointment-form" class="fade-in" style="display:none;">
                 <h2>Planifier un Rendez-vous</h2>
                 <select id="doctor-select" tabindex="0">
                     <option value="">Choisir un médecin</option>
@@ -94,14 +96,21 @@
             </div>
 
             <!-- Liste des rendez-vous à venir -->
-            <div id="upcoming-appointments" style="display:none;">
+            <div id="upcoming-appointments" class="fade-in" style="display:none;">
                 <h2>Mes RDV à venir</h2>
                 <div id="appointments-content"></div>
                 <button onclick="hideUpcomingAppointments()" tabindex="0">Retour</button>
             </div>
 
+            <!-- Nouvelle section pour la liste des chaînes -->
+            <div id="channel-selection" class="fade-in" style="display:none;">
+                <h2>Liste des Chaînes</h2>
+                <ul id="channel-list"></ul>
+                <button onclick="hideChannels()" tabindex="0">Retour</button>
+            </div>
+
             <!-- Message de bienvenue par défaut -->
-            <div id="welcome-message">
+            <div id="welcome-message" class="fade-in">
                 <h2>Bienvenue sur Dr Santé</h2>
                 <p>Connectez-vous pour accéder à vos services de téléconsultation.</p>
             </div>
