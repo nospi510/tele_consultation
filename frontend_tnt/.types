@@ -1,2 +1,3 @@
-application/vnd.hbbtv.xhtml+xml html
-video/mp4 .mp4
+application/vnd.hbbtv.xhtml+xml .html
+text/javascript .js
+text/css .css

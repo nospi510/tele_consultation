@@ -1,5 +1,8 @@
 let userData = null;
 
+// URL de la playlist M3U
+const m3uUrl = 'https://raw.githubusercontent.com/Free-TV/IPTV/master/playlist.m3u8';
+
 function initApp() {
     try {
         const appManager = document.getElementById("applicationManager");
@@ -14,7 +17,7 @@ function initApp() {
     if (token) {
         loadUserInfo(token);
         showAuthenticatedUI();
-        loadDoctors(); // Charger les médecins au démarrage
+        loadDoctors();
     }
 
     initNavigation();
@@ -51,7 +54,7 @@ function loadUserInfo(token) {
 }
 
 function showLogin() {
-    document.getElementById("welcome-message").style.display = "none";
+    hideAllRightPanels();
     document.getElementById("login-form").style.display = "block";
     document.getElementById("email-input").focus();
 }
@@ -82,7 +85,7 @@ function submitLogin() {
     .then(data => {
         localStorage.setItem("token", data.access_token);
         loadUserInfo(data.access_token);
-        loadDoctors(); // Charger les médecins après connexion
+        loadDoctors();
         alert("Connexion réussie !");
         hideLogin();
         showAuthenticatedUI();
@@ -100,12 +103,8 @@ function logout() {
 }
 
 function showConsultation() {
-    document.getElementById("welcome-message").style.display = "none";
+    hideAllRightPanels();
     document.getElementById("consultation-form").style.display = "block";
-    document.getElementById("history-view").style.display = "none";
-    document.getElementById("tips-view").style.display = "none";
-    document.getElementById("appointment-form").style.display = "none";
-    document.getElementById("upcoming-appointments").style.display = "none";
     document.getElementById("symptoms-input").focus();
 }
 
@@ -141,12 +140,8 @@ function submitConsultation() {
 }
 
 function showHistory() {
-    document.getElementById("welcome-message").style.display = "none";
-    document.getElementById("consultation-form").style.display = "none";
-    document.getElementById("tips-view").style.display = "none";
+    hideAllRightPanels();
     document.getElementById("history-view").style.display = "block";
-    document.getElementById("appointment-form").style.display = "none";
-    document.getElementById("upcoming-appointments").style.display = "none";
 
     fetch("http://localhost:5001/api/consultation/all", {
         method: "GET",
@@ -178,12 +173,8 @@ function hideHistory() {
 }
 
 function showTips() {
-    document.getElementById("welcome-message").style.display = "none";
-    document.getElementById("consultation-form").style.display = "none";
-    document.getElementById("history-view").style.display = "none";
+    hideAllRightPanels();
     document.getElementById("tips-view").style.display = "block";
-    document.getElementById("appointment-form").style.display = "none";
-    document.getElementById("upcoming-appointments").style.display = "none";
 
     fetch("http://localhost:5001/api/consultation/health-tips", {
         method: "POST",
@@ -208,13 +199,6 @@ function showTips() {
 function hideTips() {
     document.getElementById("tips-view").style.display = "none";
     document.getElementById("welcome-message").style.display = "block";
-}
-
-function updateVideoSource(url) {
-    const video = document.getElementById("video-player");
-    video.src = url;
-    video.load();
-    video.play();
 }
 
 function loadDoctors() {
@@ -242,13 +226,8 @@ function loadDoctors() {
 }
 
 function showAppointment() {
-    console.log("Affichage du formulaire de RDV...");
-    document.getElementById("welcome-message").style.display = "none";
-    document.getElementById("consultation-form").style.display = "none";
-    document.getElementById("history-view").style.display = "none";
-    document.getElementById("tips-view").style.display = "none";
+    hideAllRightPanels();
     document.getElementById("appointment-form").style.display = "block";
-    document.getElementById("upcoming-appointments").style.display = "none";
     document.getElementById("doctor-select").focus();
 }
 
@@ -275,7 +254,7 @@ function submitAppointment() {
         },
         body: JSON.stringify({
             doctor_id: parseInt(doctorId),
-            appointment_date: appointmentDate.replace("T", " ") // Convertit "2025-03-20T00:00" en "2025-03-20 00:00"
+            appointment_date: appointmentDate.replace("T", " ")
         })
     })
     .then(response => {
@@ -292,12 +271,7 @@ function submitAppointment() {
 }
 
 function showUpcomingAppointments() {
-    console.log("Affichage des RDV à venir...");
-    document.getElementById("welcome-message").style.display = "none";
-    document.getElementById("consultation-form").style.display = "none";
-    document.getElementById("history-view").style.display = "none";
-    document.getElementById("tips-view").style.display = "none";
-    document.getElementById("appointment-form").style.display = "none";
+    hideAllRightPanels();
     document.getElementById("upcoming-appointments").style.display = "block";
 
     fetch("http://localhost:5001/api/consultation/upcoming-appointments", {
@@ -338,8 +312,100 @@ function hideUpcomingAppointments() {
     document.getElementById("welcome-message").style.display = "block";
 }
 
+// Nouvelle fonctionnalité : Afficher la liste des chaînes
+async function showChannels() {
+    hideAllRightPanels();
+    document.getElementById("channel-selection").style.display = "block";
+    const channelList = document.getElementById("channel-list");
+    channelList.innerHTML = ""; // Réinitialiser la liste
+
+    const channels = await fetchM3U();
+    channels.forEach(channel => {
+        const li = document.createElement("li");
+        li.textContent = channel.name;
+        li.onclick = () => changeChannel(channel.url);
+        li.tabIndex = 0; // Rendre focusable pour la navigation
+        channelList.appendChild(li);
+    });
+}
+
+function hideChannels() {
+    document.getElementById("channel-selection").style.display = "none";
+    document.getElementById("welcome-message").style.display = "block";
+}
+
+// Récupérer et parser le fichier M3U
+async function fetchM3U() {
+    try {
+        const response = await fetch(m3uUrl);
+        const m3uData = await response.text();
+        const lines = m3uData.split('\n');
+        const channels = [];
+        let currentChannel = null;
+
+        lines.forEach(line => {
+            if (line.startsWith('#EXTINF:')) {
+                const name = line.split(',')[1].trim();
+                currentChannel = { name };
+            } else if (line.startsWith('http')) {
+                currentChannel.url = line.trim();
+                channels.push(currentChannel);
+                currentChannel = null;
+            }
+        });
+
+        return channels;
+    } catch (error) {
+        console.error('Erreur lors de la récupération du fichier M3U:', error);
+        return [];
+    }
+}
+
+// Changer la chaîne dans le lecteur vidéo
+function changeChannel(url) {
+    const video = document.getElementById("video-player");
+    if (Hls.isSupported()) {
+        const hls = new Hls();
+        hls.loadSource(url);
+        hls.attachMedia(video);
+        hls.on(Hls.Events.MANIFEST_PARSED, () => {
+            console.log("Flux M3U chargé et prêt.");
+            video.play();
+        });
+    } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+        video.src = url;
+        video.play();
+    }
+}
+
+// Mettre à jour la source vidéo (pour les consultations)
+function updateVideoSource(url) {
+    const video = document.getElementById("video-player");
+    if (Hls.isSupported()) {
+        const hls = new Hls();
+        hls.loadSource(url);
+        hls.attachMedia(video);
+        hls.on(Hls.Events.MANIFEST_PARSED, () => video.play());
+    } else {
+        video.src = url;
+        video.play();
+    }
+}
+
+// Fonction utilitaire pour masquer tous les panneaux de droite
+function hideAllRightPanels() {
+    document.getElementById("welcome-message").style.display = "none";
+    document.getElementById("login-form").style.display = "none";
+    document.getElementById("consultation-form").style.display = "none";
+    document.getElementById("history-view").style.display = "none";
+    document.getElementById("tips-view").style.display = "none";
+    document.getElementById("appointment-form").style.display = "none";
+    document.getElementById("upcoming-appointments").style.display = "none";
+    document.getElementById("channel-selection").style.display = "none";
+}
+
 function initNavigation() {
-    const focusable = Array.from(document.querySelectorAll("button, input, textarea, select")); // Ajout de select
+    const focusable = Array.from(document.querySelectorAll("button, input, textarea, select, #channel-list li"));
     let currentIndex = 0;
 
     document.addEventListener("keydown", (event) => {
