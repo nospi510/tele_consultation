@@ -7,7 +7,7 @@ class Consultation(db.Model):
     symptoms = db.Column(db.Text, nullable=False)
     diagnosis = db.Column(db.Text)
     doctor_id = db.Column(db.Integer, nullable=True)
-    is_ai_diagnosis = db.Column(db.Boolean, default=False)  # Nouveau champ
+    is_ai_diagnosis = db.Column(db.Boolean, default=False) 
     status = db.Column(db.String(50), default="pending")
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     conversation_history = db.Column(db.Text, default="")
@@ -18,7 +18,7 @@ class Consultation(db.Model):
       # Champs pour le rappel de médicaments
     medication_name = db.Column(db.String(100), nullable=True)
     medication_dosage = db.Column(db.String(100), nullable=True)
-    medication_reminder_time = db.Column(db.String(5), nullable=True)  # Format de l'heure (ex: '10:00')
+    medication_reminder_time = db.Column(db.String(5), nullable=True)  
     medication_reminder_sent = db.Column(db.Boolean, default=False)  # Indiquer si le rappel a été envoyé
 
 
