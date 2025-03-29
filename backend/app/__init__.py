@@ -18,7 +18,7 @@ def create_app():
     db.init_app(app)
     Migrate(app, db)
     jwt.init_app(app)
-    CORS(app, origins="*")  # Autorise toutes les origines pour tester
+    CORS(app, origins="*")  # Autorise toutes les origines 
 
     # Configuration Swagger pour la sécurité Bearer
     app.config['SWAGGER'] = {
@@ -37,7 +37,7 @@ def create_app():
     Swagger(app)
 
     # Initialisation de SocketIO
-    socketio.init_app(app, cors_allowed_origins="*")  # Initialise SocketIO avec l’app
+    socketio.init_app(app, cors_allowed_origins="*") 
 
     # Importation des Blueprints
     from app.routes.auth_routes import auth_bp
