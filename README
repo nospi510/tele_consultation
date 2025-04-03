@@ -39,6 +39,7 @@ cd dr-sante-mobile
 
 # Installer les dépendances nécessaires
 npm install axios @ionic/angular @capacitor/core @capacitor/android @capacitor/ios
+npm install socket.io-client simple-peer @types/simple-peer --save
 
 # Installer les dépendances nécessaires :
 
@@ -46,3 +47,13 @@ ionic capacitor add android
 ionic capacitor add ios
 # Vérifier le démarrage :
 ionic serve
+
+
+#Modifie polyfills.ts dans src/ pour inclure ce polyfill :
+
+#// src/polyfills.ts
+import 'zone.js'; // Inclus par défaut dans Angular
+
+(window as any).global = window;
+
+

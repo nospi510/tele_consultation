@@ -117,6 +117,26 @@ export class DoctorDashboardPage implements OnInit {
     this.router.navigate(['/doctor/upcoming-appointments']);
   }
 
+createLiveSession() {
+    const title = prompt('Entrez le titre de la session live :');
+    if (title) {
+      this.http.post(`${environment.apiUrl}/tnt/live-session/create`, { title }, {
+        headers: { Authorization: `Bearer ${this.authService.getToken()}` }
+      }).subscribe({
+        next: (response: any) => {
+          this.router.navigate(['/live-session', response.session_id]);
+        },
+        error: (err) => {
+          console.error('Erreur lors de la création de la session', err);
+          alert('Erreur lors de la création de la session');
+        }
+      });
+    }
+  }
+
+  goToLiveList() {
+    this.router.navigate(['/live-list']);
+  }
   logout() {
     this.authService.logout();
     this.goToLogin();

@@ -1,0 +1,126 @@
+$primary-gradient: linear-gradient(135deg, #4f46e5, #7c3aed);
+$secondary-gradient: linear-gradient(135deg, #10b981, #34d399);
+$card-bg: rgba(255, 255, 255, 0.95);
+$shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+$hover-scale: scale(1.05);
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+  100% { transform: scale(1); }
+}
+
+.header-gradient {
+  --background: #{$primary-gradient};
+  --color: white;
+  padding: 10px 15px;
+  ion-title {
+    font-weight: 700;
+    font-size: 1.5rem;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  }
+  .create-btn {
+    --background: #{$secondary-gradient};
+    --border-radius: 12px;
+    --color: white;
+    font-weight: 600;
+    text-transform: uppercase;
+    transition: all 0.3s ease;
+    &:hover {
+      transform: $hover-scale;
+    }
+    ion-icon {
+      font-size: 1.5rem;
+      margin-right: 5px;
+    }
+  }
+}
+
+.live-background {
+  --background: linear-gradient(180deg, #e0e7ff 0%, #f3e8ff 100%);
+  padding: 20px;
+}
+
+.sessions-list {
+  max-width: 800px;
+  margin: 0 auto;
+  background: transparent;
+
+  .session-item {
+    --background: #{$card-bg};
+    --border-radius: 15px;
+    margin-bottom: 15px;
+    box-shadow: $shadow;
+    transition: all 0.3s ease;
+    animation: fadeInUp 0.6s ease-out;
+    position: relative;
+    overflow: hidden;
+
+    &::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: $secondary-gradient;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      z-index: 0;
+    }
+
+    &:hover {
+      transform: $hover-scale;
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
+      &::before {
+        opacity: 0.1;
+      }
+      .session-icon {
+        animation: pulse 1s infinite;
+      }
+    }
+
+    .session-icon {
+      font-size: 2rem;
+      color: #ec4899; // Rose vibrant
+      margin-right: 15px;
+      z-index: 1;
+    }
+
+    ion-label {
+      z-index: 1;
+      h2 {
+        font-size: 1.3rem;
+        font-weight: 600;
+        color: #1f2937;
+      }
+      p {
+        font-size: 1rem;
+        color: #4b5563;
+        margin: 5px 0;
+      }
+    }
+
+    .live-badge {
+      font-size: 0.9rem;
+      padding: 5px 10px;
+      border-radius: 12px;
+      z-index: 1;
+    }
+  }
+}
+
+@media (max-width: 600px) {
+  .session-item {
+    ion-label {
+      h2 { font-size: 1.1rem; }
+      p { font-size: 0.9rem; }
+    }
+    .session-icon { font-size: 1.5rem; }
+  }
+}
