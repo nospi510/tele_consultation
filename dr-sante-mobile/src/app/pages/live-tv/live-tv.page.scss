@@ -1,0 +1,193 @@
+$primary-gradient: linear-gradient(135deg, #4f46e5, #7c3aed);
+$secondary-gradient: linear-gradient(135deg, #10b981, #34d399);
+$card-bg: rgba(255, 255, 255, 0.95);
+$shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+$channel-violet: #4c1180;
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideIn {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(0); }
+}
+
+.header-gradient {
+  --background: #{$primary-gradient};
+  --color: white;
+  padding: 10px 15px;
+  .header-title {
+    font-weight: 700;
+    font-size: 1.5rem;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  }
+  .back-btn {
+    --color: white;
+    font-size: 1.8rem;
+  }
+}
+
+.live-tv-background {
+  --background: linear-gradient(180deg, #e0e7ff 0%, #f3e8ff 100%);
+  padding: 20px;
+}
+
+.live-tv-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  position: relative;
+  display: flex;
+  justify-content: center;
+}
+
+.video-wrapper {
+  width: 100%;
+  max-width: 800px;
+  .video-container {
+    position: relative;
+    width: 100%;
+    height: 450px; // Hauteur fixe pour le cadre
+    background: #1f2937; // Fond sombre pour le conteneur
+    border-radius: 10px;
+    box-shadow: $shadow;
+    overflow: hidden; // Contient les éléments de video.js
+
+    .live-video {
+      width: 100%;
+      height: 100%; // Remplit le conteneur
+      object-fit: cover; // S'adapte sans déformer
+      position: absolute;
+      top: 0;
+      left: 0;
+      z-index: 10;
+    }
+
+    .video-placeholder {
+      width: 100%;
+      height: 100%;
+      background: #f3f4f6;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: #4b5563;
+      font-size: 1.2rem;
+      animation: fadeIn 0.5s ease-in;
+      position: absolute;
+      top: 0;
+      left: 0;
+      z-index: 5;
+      .placeholder-icon {
+        font-size: 3rem;
+        color: #6366f1;
+        margin-bottom: 10px;
+      }
+    }
+
+    .channel-name {
+      position: absolute;
+      bottom: 10px;
+      left: 10px;
+      background: rgba(0, 0, 0, 0.7);
+      color: white;
+      padding: 5px 10px;
+      border-radius: 5px;
+      font-weight: 600;
+      z-index: 11;
+    }
+  }
+}
+
+.channel-bubble {
+  position: fixed;
+  top: 100px;
+  left: 20px;
+  width: 300px;
+  background: $card-bg;
+  border-radius: 20px;
+  box-shadow: $shadow;
+  z-index: 100;
+  overflow: hidden;
+  transition: all 0.3s ease;
+
+  .bubble-header {
+    background: $primary-gradient;
+    color: white;
+    padding: 10px 15px;
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    .bubble-icon {
+      font-size: 1.5rem;
+      margin-right: 10px;
+    }
+    span {
+      font-weight: 600;
+      font-size: 1.2rem;
+    }
+  }
+
+  .bubble-content {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+    &.open {
+      max-height: 400px;
+      overflow-y: auto;
+    }
+    .channel-list {
+      padding: 10px;
+      .channel-item {
+        --background: $channel-violet;
+        --color: white;
+        --border-radius: 8px;
+        margin-bottom: 8px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        &.selected {
+          --background: #{$secondary-gradient};
+        }
+        &:hover {
+          transform: scale(1.03);
+        }
+        .channel-icon {
+          font-size: 1.3rem;
+          color: white;
+          margin-right: 10px;
+        }
+        ion-label {
+          font-size: 1rem;
+          font-weight: 500;
+        }
+      }
+      .loading-item {
+        --background: #e5e7eb;
+        --border-radius: 8px;
+      }
+      .error-item {
+        --background: #fee2e2;
+        --border-radius: 8px;
+        .error-icon {
+          color: #ef4444;
+          margin-right: 10px;
+        }
+      }
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  .channel-bubble {
+    width: 250px;
+    top: 80px;
+    left: 10px;
+  }
+  .video-wrapper {
+    .video-container {
+      height: 300px;
+      
+    }
+  }
+}

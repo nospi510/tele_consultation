@@ -1,119 +1,87 @@
-.reminder-background {
-  --background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 100%;
-}
+$primary-gradient: linear-gradient(135deg, #4f46e5, #7c3aed);
+$secondary-gradient: linear-gradient(135deg, #10b981, #34d399);
+$card-bg: rgba(255, 255, 255, 0.95);
+$shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+$hover-scale: scale(1.05);
 
-.reminder-container {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 100%;
-  padding: 20px;
-}
-
-.reminder-card {
-  border-radius: 20px;
-  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
-  background: rgba(255, 255, 255, 0.95);
-  max-width: 500px;
-  width: 100%;
-  animation: slide-up 0.5s ease-in-out;
-
-  .card-header {
-    text-align: center;
-    padding-bottom: 15px;
-
-    .title-gradient {
-      font-size: 2rem;
-      font-weight: 700;
-      background: linear-gradient(90deg, #1e3a8a, #3b82f6);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-    }
-
-    ion-card-subtitle {
-      color: #6b7280;
-      font-size: 1rem;
-      margin-top: 5px;
-    }
-  }
-
-  .reminder-content {
-    padding: 20px;
-  }
-}
+@keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
 
 .header-gradient {
-  --background: linear-gradient(90deg, #1e3a8a 0%, #3b82f6 100%);
+  --background: #{$primary-gradient};
   --color: white;
-
+  padding: 10px 15px;
+  ion-title { font-weight: 700; font-size: 1.5rem; text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2); }
   .back-btn {
     --color: white;
-    font-size: 1.5rem;
-    transition: transform 0.2s ease;
+    --background: transparent;
+    --border-radius: 50%;
+    ion-icon { font-size: 1.8rem; transition: transform 0.3s ease; }
+    &:hover { ion-icon { transform: translateX(-5px); } }
+  }
+}
 
-    &:hover {
-      transform: scale(1.1);
+.reminder-background { --background: linear-gradient(180deg, #e0e7ff 0%, #f3e8ff 100%); padding: 20px; }
+.reminder-container { max-width: 600px; margin: 0 auto; }
+
+.reminder-card {
+  border-radius: 25px;
+  background: $card-bg;
+  box-shadow: $shadow;
+  animation: fadeInUp 0.6s ease-out;
+  overflow: hidden;
+  .card-header {
+    background: $primary-gradient;
+    padding: 20px;
+    text-align: center;
+    border-radius: 25px 25px 0 0;
+    .title-gradient {
+      font-size: 2rem;
+      font-weight: 800;
+      color: white;
+      text-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      .header-icon { font-size: 2rem; margin-right: 10px; color: #f3e8ff; animation: pulse 2s infinite; }
+    }
+    ion-card-subtitle { color: rgba(255, 255, 255, 0.9); font-size: 1.1rem; margin-top: 8px; }
+  }
+  .reminder-content {
+    padding: 25px;
+    .input-item {
+      --background: #f3f4f6;
+      border-radius: 15px;
+      padding: 15px;
+      margin-bottom: 20px;
+      transition: all 0.3s ease;
+      &:hover { --background: #e5e7eb; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1); }
+      .input-icon { font-size: 1.8rem; color: #8b5cf6; margin-right: 15px; }
+      ion-label { font-size: 1.1rem; font-weight: 600; color: #1f2937; }
+      ion-select, ion-input { --padding-start: 10px; font-size: 1rem; color: #1f2937; }
+    }
+    .reminder-button {
+      --background: #{$secondary-gradient};
+      --border-radius: 15px;
+      --padding-top: 12px;
+      --padding-bottom: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      transition: all 0.3s ease;
+      &:hover { --background: linear-gradient(135deg, #059669, #10b981); transform: $hover-scale; }
+      &:disabled { --background: #d1d5db; --opacity: 0.7; }
+      ion-icon { margin-left: 10px; font-size: 1.5rem; }
     }
   }
 }
 
-.input-item {
-  --background: #f3f4f6;
-  --border-radius: 12px;
-  margin-bottom: 20px;
-  padding: 10px;
+ion-popover { --background: #ffffff; --box-shadow: $shadow; --border-radius: 15px; }
+ion-datetime { --background: #ffffff; --color: #1f2937; border-radius: 15px; padding: 15px; }
 
-  ion-label {
-    color: #4b5563;
-    font-weight: 500;
-    margin-right: 10px;
-  }
-
-  ion-select, ion-input, ion-datetime {
-    --color: #1f2937;
-    --placeholder-color: #9ca3af;
-    font-size: 1rem;
-    width: 100%;
-  }
-
-  .input-icon {
-    color: #3b82f6;
-    font-size: 1.5rem;
-    margin-right: 15px;
-  }
-}
-
-.reminder-button {
-  --background: linear-gradient(90deg, #15803d, #22c55e);
-  --border-radius: 12px;
-  --padding-top: 12px;
-  --padding-bottom: 12px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  transition: transform 0.2s ease;
-
-  &:hover {
-    --background: linear-gradient(90deg, #166534, #4ade80);
-    transform: scale(1.05);
-  }
-
-  ion-icon {
-    margin-left: 10px;
-  }
-}
-
-@keyframes slide-up {
-  from {
-    transform: translateY(50px);
-    opacity: 0;
-  }
-  to {
-    transform: translateY(0);
-    opacity: 1;
+@media (max-width: 600px) {
+  .reminder-card {
+    .card-header { .title-gradient { font-size: 1.5rem; .header-icon { font-size: 1.5rem; } } }
+    .reminder-content { padding: 15px; .input-item { padding: 10px; .input-icon { font-size: 1.5rem; } ion-label { font-size: 1rem; } } }
   }
 }

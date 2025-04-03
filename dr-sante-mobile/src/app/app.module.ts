@@ -9,7 +9,7 @@ import { FormsModule } from '@angular/forms';
 import { SocketIoModule, SocketIoConfig } from 'ngx-socket-io';
 import { JwtModule } from '@auth0/angular-jwt';
 
-const socketConfig: SocketIoConfig = { url: 'http://localhost:5001', options: {} };
+const config: SocketIoConfig = { url: 'http://localhost:5001', options: {} };
 
 export function tokenGetter() {
   return localStorage.getItem('token');
@@ -23,7 +23,7 @@ export function tokenGetter() {
     AppRoutingModule,
     HttpClientModule,
     FormsModule,
-    SocketIoModule.forRoot(socketConfig),
+    SocketIoModule.forRoot(config),
     JwtModule.forRoot({
       config: {
         tokenGetter: tokenGetter,
