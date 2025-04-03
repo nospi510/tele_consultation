@@ -63,4 +63,19 @@ export class UpcomingAppointmentsPage implements OnInit {
   goToHome() {
     this.router.navigate(['/home']);
   }
+
+  getStatusColor(status: string): string {
+    switch (status) {
+      case 'planifié':
+        return 'warning'; // Jaune
+      case 'en cours':
+        return 'primary'; // Bleu
+      case 'terminé':
+        return 'success'; // Vert
+      case 'annulé':
+        return 'danger'; // Rouge
+      default:
+        return 'medium'; // Gris
+    }
+  }
 }

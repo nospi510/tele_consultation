@@ -68,4 +68,12 @@ export class HomePage implements OnInit {
   goToMedicationReminders() {
     this.router.navigate(['/patient-medication-reminders']);
   }
+
+  goToLive() {
+    this.router.navigate(['/live-tv']);
+  }
+
+  goToDrLive() {
+    this.router.navigate(['/live-list']);
+  }
 }

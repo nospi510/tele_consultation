@@ -13,37 +13,42 @@
   <div class="schedule-container">
     <ion-card class="schedule-card">
       <ion-card-header class="card-header">
-        <ion-card-title class="title-gradient">Nouveau Rendez-vous</ion-card-title>
-        <ion-card-subtitle>Planifiez avec un médecin</ion-card-subtitle>
+        <ion-card-title class="title-gradient">
+          <ion-icon name="calendar-outline" class="header-icon"></ion-icon>
+          Nouveau Rendez-vous
+        </ion-card-title>
+        <ion-card-subtitle class="subtitle-text">Planifiez avec un médecin en quelques clics</ion-card-subtitle>
       </ion-card-header>
       <ion-card-content class="schedule-content">
         <form (ngSubmit)="scheduleAppointment()">
           <ion-item class="input-item" lines="none">
-            <ion-icon name="person-outline" slot="start" class="input-icon"></ion-icon>
-            <ion-label>Médecin</ion-label>
-            <ion-select [(ngModel)]="doctorId" name="doctorId" placeholder="Choisir un médecin" required>
+            <ion-icon name="medkit-outline" slot="start" class="input-icon"></ion-icon>
+            <ion-label position="floating">Choisir un médecin</ion-label>
+            <ion-select [(ngModel)]="doctorId" name="doctorId" placeholder="Sélectionnez un médecin" required interface="popover">
               <ion-select-option *ngFor="let doctor of doctors" [value]="doctor.id">
-                {{ doctor.fullname }} ({{ doctor.email }})
+                Dr. {{ doctor.fullname }} ({{ doctor.specialty || 'Généraliste' }})
               </ion-select-option>
             </ion-select>
           </ion-item>
           <ion-item class="input-item" lines="none">
             <ion-icon name="calendar-outline" slot="start" class="input-icon"></ion-icon>
-            <ion-label>Date et heure</ion-label>
+            <ion-label position="floating">Date et heure</ion-label>
             <ion-input 
-              value="{{ appointmentDate | date:'yyyy-MM-dd HH:mm' }}" 
+              value="{{ appointmentDate | date:'dd MMM yyyy, HH:mm' }}" 
               placeholder="Choisir une date" 
               readonly 
               (click)="toggleDatePicker()"
+              class="date-input"
             ></ion-input>
             <ion-popover trigger="date-picker-trigger" [isOpen]="isDatePickerOpen" (didDismiss)="isDatePickerOpen = false">
               <ng-template>
                 <ion-datetime 
                   [(ngModel)]="appointmentDate" 
                   name="appointmentDate" 
-                  displayFormat="YYYY-MM-DD HH:mm" 
+                  displayFormat="DD MMM YYYY HH:mm" 
                   presentation="date-time"
                   (ionChange)="onDateChange()"
+                  locale="fr-FR"
                 ></ion-datetime>
               </ng-template>
             </ion-popover>

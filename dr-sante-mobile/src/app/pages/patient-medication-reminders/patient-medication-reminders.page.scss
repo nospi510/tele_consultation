@@ -1,86 +1,230 @@
-.reminders-background {
-    --background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
-    height: 100%;
+// Variables cohérentes avec le design précédent
+$primary-gradient: linear-gradient(135deg, #4f46e5, #7c3aed); // Violet-indigo
+$secondary-gradient: linear-gradient(135deg, #10b981, #34d399); // Vert émeraude
+$card-bg: rgba(255, 255, 255, 0.95);
+$shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+$hover-scale: scale(1.05);
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
   }
-  
-  .reminders-container {
-    padding: 20px;
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
-  
-  .header-gradient {
-    --background: linear-gradient(90deg, #1e3a8a 0%, #3b82f6 100%);
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+  100% { transform: scale(1); }
+}
+
+// En-tête
+.header-gradient {
+  --background: #{$primary-gradient};
+  --color: white;
+  padding: 10px 15px;
+  ion-title {
+    font-weight: 700;
+    font-size: 1.5rem;
+    letter-spacing: 0.5px;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  }
+  .back-btn {
     --color: white;
-  
-    .back-btn {
-      --color: white;
-      font-size: 1.5rem;
-      transition: transform 0.2s ease;
-  
-      &:hover {
-        transform: scale(1.1);
-      }
+    --background: transparent;
+    --border-radius: 50%;
+    --padding-start: 10px;
+    --padding-end: 10px;
+    ion-icon {
+      font-size: 1.8rem;
+      transition: transform 0.3s ease;
     }
-  }
-  
-  .reminder-card {
-    border-radius: 15px;
-    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
-    background: rgba(255, 255, 255, 0.95);
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
-    animation: fade-in 0.5s ease-in-out;
-  
     &:hover {
-      transform: translateY(-5px);
-      box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15);
-    }
-  
-    .card-header {
-      background: linear-gradient(135deg, #10b981, #34d399);
-      border-radius: 15px 15px 0 0;
-      padding: 15px;
-      text-align: center;
-  
-      .medication-title {
-        color: white;
-        font-size: 1.4rem;
-        font-weight: 600;
+      ion-icon {
+        transform: translateX(-5px);
       }
-  
-      .dosage-text {
-        color: #d1fae5;
+    }
+  }
+}
+
+// Fond
+.reminders-background {
+  --background: linear-gradient(180deg, #e0e7ff 0%, #f3e8ff 100%);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  padding: 20px;
+}
+
+// Conteneur
+.reminders-container {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+// Grille
+.reminders-grid {
+  padding: 10px;
+  .reminders-row {
+    justify-content: center;
+  }
+}
+
+// Carte de rappel
+.reminder-card {
+  border-radius: 20px;
+  background: $card-bg;
+  box-shadow: $shadow;
+  transition: all 0.3s ease;
+  animation: fadeInUp 0.6s ease-out;
+  position: relative;
+  overflow: hidden;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: $secondary-gradient;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    z-index: 0;
+  }
+
+  &:hover {
+    transform: $hover-scale;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
+    &::before {
+      opacity: 0.1;
+    }
+    .title-icon {
+      animation: pulse 1s infinite;
+    }
+  }
+
+  .card-header {
+    background: $primary-gradient;
+    padding: 15px;
+    border-radius: 20px 20px 0 0;
+    position: relative;
+    z-index: 1;
+
+    .medication-title {
+      color: white;
+      font-size: 1.4rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+
+      .title-icon {
+        font-size: 1.5rem;
+        margin-right: 10px;
+        color: #f3e8ff;
+      }
+    }
+
+    .dosage-text {
+      color: rgba(255, 255, 255, 0.9);
+      font-size: 1rem;
+      margin-top: 8px;
+      display: flex;
+      align-items: center;
+
+      .subtitle-icon {
+        font-size: 1.2rem;
+        margin-right: 8px;
+        color: #e0e7ff;
+      }
+    }
+  }
+
+  .card-content {
+    padding: 15px;
+    position: relative;
+    z-index: 1;
+
+    .time-item, .sent-item {
+      --background: #f3f4f6;
+      border-radius: 10px;
+      margin-bottom: 10px;
+      padding: 10px;
+      transition: all 0.3s ease;
+
+      &:hover {
+        --background: #e5e7eb;
+      }
+
+      .info-icon {
+        font-size: 1.5rem;
+        margin-right: 15px;
+        color: #8b5cf6; // Violet pour les rappels
+      }
+
+      ion-label {
         font-size: 1rem;
-        margin-top: 5px;
+        color: #1f2937;
+        font-weight: 500;
       }
     }
-  
-    .card-content {
-      padding: 15px;
-  
-      .time-item, .sent-item {
-        --background: transparent;
-        margin-bottom: 10px;
-  
-        .info-icon {
-          color: #10b981;
+
+    .action-button {
+      --border-radius: 12px;
+      --border-color: #10b981;
+      --color: #10b981;
+      --padding-top: 10px;
+      --padding-bottom: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      transition: all 0.3s ease;
+      margin-top: 15px;
+
+      &:hover {
+        --background: #10b981;
+        --color: white;
+        transform: $hover-scale;
+      }
+
+      ion-icon {
+        margin-right: 8px;
+        font-size: 1.5rem;
+      }
+    }
+  }
+}
+
+// Responsive
+@media (max-width: 768px) {
+  .reminder-card {
+    .card-header {
+      .medication-title {
+        font-size: 1.2rem;
+        .title-icon {
           font-size: 1.3rem;
-          margin-right: 10px;
         }
-  
+      }
+      .dosage-text {
+        font-size: 0.9rem;
+        .subtitle-icon {
+          font-size: 1rem;
+        }
+      }
+    }
+    .card-content {
+      .time-item, .sent-item {
         ion-label {
-          color: #1f2937;
-          font-size: 0.95rem;
+          font-size: 0.9rem;
         }
       }
     }
   }
-  
-  @keyframes fade-in {
-    from {
-      opacity: 0;
-      transform: scale(0.95);
-    }
-    to {
-      opacity: 1;
-      transform: scale(1);
-    }
-  }
+}

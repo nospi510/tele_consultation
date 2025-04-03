@@ -22,7 +22,8 @@ export class DoctorConsultationDetailPage implements OnInit, OnDestroy {
   reminderMessage: string = '';
   statusOptions = ['pending', 'en cours', 'terminée', 'annulée'];
   selectedStatus: string = '';
-  messages: { sender: string; text: string }[] = [];
+  // Ajout de la propriété timestamp dans l'interface des messages
+  messages: { sender: string; text: string; timestamp: Date }[] = [];
   isPatientTyping: boolean = false;
   inCall: boolean = false;
   localStream: MediaStream | null = null;
@@ -100,20 +101,32 @@ export class DoctorConsultationDetailPage implements OnInit, OnDestroy {
     this.socket.on('webrtc_ice_candidate', (data: any) => this.handleIceCandidate(data));
   }
 
+  // Mise à jour de la méthode pour inclure timestamp
   updateMessages(conversationHistory: string) {
-    if (!conversationHistory) {
-      this.messages = [];
-      return;
-    }
-    const newMessages = conversationHistory.split('\n')
-      .filter(line => line.trim())
-      .map(line => {
-        const [sender, ...textParts] = line.split(': ');
-        return { sender: sender.trim(), text: textParts.join(': ').trim() };
+    this.messages = [];
+    if (conversationHistory) {
+      const lines = conversationHistory.split('\n');
+      lines.forEach((line: string) => {
+        if (line.trim()) {
+          const [sender, ...textParts] = line.split(': ');
+          const senderText = sender.trim();
+          const messageText = textParts.join(': ').trim();
+          // Extraction du timestamp s'il est présent dans le format "[timestamp]"
+          const timestampMatch = messageText.match(/\[(.*?)\]$/);
+          let messageContent = messageText;
+          let timestamp = new Date(); // Par défaut, date actuelle si aucun timestamp
+
+          if (timestampMatch) {
+            messageContent = messageText.replace(timestampMatch[0], '').trim();
+            timestamp = new Date(timestampMatch[1]);
+          }
+
+          if (!this.messages.some(msg => msg.sender === senderText && msg.text === messageContent)) {
+            this.messages.push({ sender: senderText, text: messageContent, timestamp });
+          }
+        }
       });
-    this.messages = newMessages.filter((msg, index, self) =>
-      index === self.findIndex(m => m.sender === msg.sender && m.text === msg.text)
-    );
+    }
   }
 
   checkMessageSync(serverHistory: string) {
@@ -137,7 +150,8 @@ export class DoctorConsultationDetailPage implements OnInit, OnDestroy {
     const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`);
     const messageToSend = this.newMessage;
 
-    this.messages.push({ sender: 'Médecin', text: messageToSend });
+    // Ajout du message avec timestamp
+    this.messages.push({ sender: 'Médecin', text: messageToSend, timestamp: new Date() });
     this.newMessage = '';
     this.socket.emit('typing', { consultation_id: this.consultation.id, user_role: 'doctor', is_typing: false });
 
@@ -232,7 +246,7 @@ export class DoctorConsultationDetailPage implements OnInit, OnDestroy {
       };
     } catch (error) {
       console.error('Médecin - Erreur WebRTC:', error);
-      this.showToast('Erreur lors de l’initialisation de l’appel: ' , 'danger');
+      this.showToast('Erreur lors de l’initialisation de l’appel', 'danger');
       this.inCall = false;
     }
   }

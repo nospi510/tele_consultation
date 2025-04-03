@@ -1,93 +1,117 @@
 <ion-header translucent>
-  <ion-toolbar color="primary">
+  <ion-toolbar class="header-gradient">
     <ion-buttons slot="start">
-      <ion-back-button defaultHref="/doctor-dashboard" (click)="goToHome()"></ion-back-button>
+      <ion-back-button defaultHref="/doctor-dashboard" (click)="goToHome()" class="back-btn"></ion-back-button>
     </ion-buttons>
-    <ion-title>Consultation #{{ consultation.id }}</ion-title>
+    <ion-title class="header-title">Consultation #{{ consultation.id }}</ion-title>
   </ion-toolbar>
 </ion-header>
 
-<ion-content class="ion-padding" fullscreen>
+<ion-content class="ion-padding consultation-background">
   <div class="consultation-container">
-    <ion-card class="consultation-card">
-      <ion-card-header class="header-gradient">
-        <ion-card-title>Détails Consultation</ion-card-title>
-        <ion-card-subtitle>Patient : {{ consultation.patient_name }}</ion-card-subtitle>
+    <ion-card class="consultation-card glass-effect">
+      <div class="card-overlay"></div>
+      <ion-card-header class="card-header">
+        <ion-card-title class="title-gradient">
+          <ion-icon name="stethoscope-outline" class="header-icon"></ion-icon>
+          Détails Consultation
+        </ion-card-title>
+        <ion-card-subtitle class="subtitle">Patient : {{ consultation.patient_name }}</ion-card-subtitle>
+        <div class="header-decoration"></div>
       </ion-card-header>
-      <ion-card-content>
-        <div class="info-section">
-          <ion-chip color="secondary">
-            <ion-icon name="pulse-outline"></ion-icon>
-            <ion-label>Symptômes : {{ consultation.symptoms }}</ion-label>
-          </ion-chip>
-          <ion-chip color="warning">
-            <ion-icon name="medkit-outline"></ion-icon>
-            <ion-label>Diagnostic : {{ consultation.diagnosis || 'En attente' }}</ion-label>
-          </ion-chip>
-          <ion-chip color="success">
-            <ion-icon name="checkmark-circle-outline"></ion-icon>
-            <ion-label>Statut : {{ consultation.status }}</ion-label>
-          </ion-chip>
+      <ion-card-content class="consultation-content">
+        <div class="consultation-details">
+          <ion-item lines="none" class="detail-item glow-effect">
+            <ion-icon name="pulse-outline" slot="start" class="detail-icon"></ion-icon>
+            <ion-label><strong>Symptômes :</strong> {{ consultation.symptoms }}</ion-label>
+          </ion-item>
+          <ion-item lines="none" class="detail-item glow-effect">
+            <ion-icon name="medkit-outline" slot="start" class="detail-icon"></ion-icon>
+            <ion-label><strong>Diagnostic :</strong> {{ consultation.diagnosis || 'En attente' }}</ion-label>
+          </ion-item>
+          <ion-item lines="none" class="detail-item glow-effect">
+            <ion-icon name="checkmark-circle-outline" slot="start" class="detail-icon"></ion-icon>
+            <ion-label><strong>Statut :</strong> {{ consultation.status }}</ion-label>
+          </ion-item>
         </div>
 
-        <ion-button expand="block" color="primary" (click)="proposeCall()" *ngIf="!inCall">
+        <ion-button expand="block" class="action-button propose-button" (click)="proposeCall()" *ngIf="!inCall">
           Proposer un appel vidéo
+          <ion-icon name="videocam-outline" slot="end"></ion-icon>
         </ion-button>
 
-        <div class="video-call" *ngIf="inCall">
-          <video #localVideo autoplay muted playsinline class="local-video"></video>
-          <video #remoteVideo autoplay playsinline class="remote-video"></video>
-          <ion-item class="status-select" lines="none">
+        <div class="video-call glass-effect" *ngIf="inCall">
+          <video #localVideo autoplay muted playsinline class="local-video glass-effect"></video>
+          <video #remoteVideo autoplay playsinline class="remote-video glass-effect"></video>
+          <ion-item class="input-item glass-effect">
+            <ion-icon name="checkmark-circle-outline" slot="start" class="input-icon"></ion-icon>
             <ion-label>Statut</ion-label>
             <ion-select [(ngModel)]="selectedStatus" (ionChange)="updateStatus()" interface="popover">
               <ion-select-option *ngFor="let status of statusOptions" [value]="status">{{ status }}</ion-select-option>
             </ion-select>
           </ion-item>
-          <ion-item class="message-input" lines="none">
-            <ion-textarea [(ngModel)]="newMessage" placeholder="Écrire un diagnostic..." rows="2" (ionInput)="onTyping($event)" auto-grow></ion-textarea>
-            <ion-button slot="end" fill="clear" (click)="continueConsultation()" [disabled]="!newMessage">
-              <ion-icon name="send" color="primary"></ion-icon>
-            </ion-button>
+          <ion-item class="input-item glass-effect">
+            <ion-icon name="document-text-outline" slot="start" class="input-icon"></ion-icon>
+            <ion-label position="floating">Écrire un diagnostic</ion-label>
+            <ion-textarea [(ngModel)]="newMessage" rows="3" placeholder="Tapez votre diagnostic..." (ionInput)="onTyping($event)" auto-grow></ion-textarea>
           </ion-item>
-          <ion-button expand="block" color="danger" (click)="endCall()">Terminer l’appel</ion-button>
+          <ion-button expand="block" class="action-button send-button" (click)="continueConsultation()" [disabled]="!newMessage">
+            Envoyer Diagnostic
+            <ion-icon name="send-outline" slot="end"></ion-icon>
+          </ion-button>
+          <ion-button expand="block" class="action-button end-button" (click)="endCall()">
+            Terminer l’appel
+            <ion-icon name="call-outline" slot="end"></ion-icon>
+          </ion-button>
         </div>
 
-        <ion-list class="chat-list" *ngIf="!inCall">
-          <ion-item *ngFor="let message of messages" [ngClass]="message.sender === 'Médecin' ? 'chat-item doctor' : 'chat-item patient'" lines="none">
-            <ion-avatar slot="start" [ngClass]="message.sender === 'Médecin' ? 'doctor-avatar' : 'patient-avatar'">
-              <ion-icon [name]="message.sender === 'Médecin' ? 'medkit' : 'person'"></ion-icon>
+        <ion-list class="chat-list glass-effect" *ngIf="!inCall">
+          <ion-item *ngFor="let message of messages" [ngClass]="{'doctor-message': message.sender === 'Médecin', 'patient-message': message.sender !== 'Médecin'}" class="chat-item">
+            <ion-avatar slot="start" *ngIf="message.sender === 'Médecin'" class="chat-avatar">
+              <ion-icon name="medkit-outline"></ion-icon>
             </ion-avatar>
             <ion-label class="chat-message">
-              <h3>{{ message.sender }}</h3>
+              <strong>{{ message.sender }}</strong>
               <p>{{ message.text }}</p>
+              <ion-text color="medium" class="timestamp">{{ message.timestamp | date:'HH:mm' }}</ion-text>
             </ion-label>
+            <ion-avatar slot="end" *ngIf="message.sender !== 'Médecin'" class="chat-avatar">
+              <ion-icon name="person-outline"></ion-icon>
+            </ion-avatar>
           </ion-item>
-          <ion-item *ngIf="isPatientTyping" color="tertiary" lines="none">
+          <ion-item *ngIf="isPatientTyping" class="typing-indicator glass-effect">
+            <ion-icon name="ellipsis-horizontal" slot="start" class="typing-icon"></ion-icon>
             <ion-label>Patient est en train d’écrire...</ion-label>
-            <ion-spinner name="dots" slot="end"></ion-spinner>
           </ion-item>
         </ion-list>
 
-        <ion-item class="status-select" lines="none" *ngIf="!inCall">
-          <ion-label>Statut</ion-label>
-          <ion-select [(ngModel)]="selectedStatus" (ionChange)="updateStatus()" interface="popover">
-            <ion-select-option *ngFor="let status of statusOptions" [value]="status">{{ status }}</ion-select-option>
-          </ion-select>
-        </ion-item>
-
-        <ion-item class="message-input" lines="none" *ngIf="!inCall">
-          <ion-textarea [(ngModel)]="newMessage" placeholder="Votre message..." rows="2" (ionInput)="onTyping($event)" auto-grow></ion-textarea>
-          <ion-button slot="end" fill="clear" (click)="continueConsultation()" [disabled]="!newMessage">
-            <ion-icon name="send" color="primary"></ion-icon>
+        <div class="message-section glass-effect" *ngIf="!inCall">
+          <ion-item class="input-item glass-effect">
+            <ion-icon name="checkmark-circle-outline" slot="start" class="input-icon"></ion-icon>
+            <ion-label>Statut</ion-label>
+            <ion-select [(ngModel)]="selectedStatus" (ionChange)="updateStatus()" interface="popover">
+              <ion-select-option *ngFor="let status of statusOptions" [value]="status">{{ status }}</ion-select-option>
+            </ion-select>
+          </ion-item>
+          <ion-item class="input-item glass-effect">
+            <ion-icon name="chatbubble-outline" slot="start" class="input-icon"></ion-icon>
+            <ion-label position="floating">Nouveau Message</ion-label>
+            <ion-textarea [(ngModel)]="newMessage" rows="3" placeholder="Tapez votre message..." (ionInput)="onTyping($event)" auto-grow></ion-textarea>
+          </ion-item>
+          <ion-button expand="block" class="action-button send-button" (click)="continueConsultation()" [disabled]="!newMessage">
+            Envoyer Message
+            <ion-icon name="send-outline" slot="end"></ion-icon>
           </ion-button>
-        </ion-item>
-
-        <ion-item class="reminder-input" lines="none" *ngIf="!inCall">
-          <ion-textarea [(ngModel)]="reminderMessage" placeholder="Rappel pour le patient..." rows="2" auto-grow></ion-textarea>
-          <ion-button slot="end" fill="clear" (click)="sendReminder()" [disabled]="!reminderMessage">
-            <ion-icon name="alarm" color="success"></ion-icon>
+          <ion-item class="input-item glass-effect">
+            <ion-icon name="alarm-outline" slot="start" class="input-icon"></ion-icon>
+            <ion-label position="floating">Rappel pour le patient</ion-label>
+            <ion-textarea [(ngModel)]="reminderMessage" rows="3" placeholder="Ex: Prenez vos médicaments..." auto-grow></ion-textarea>
+          </ion-item>
+          <ion-button expand="block" class="action-button reminder-button" (click)="sendReminder()" [disabled]="!reminderMessage">
+            Envoyer Rappel
+            <ion-icon name="alarm-outline" slot="end"></ion-icon>
           </ion-button>
-        </ion-item>
+        </div>
       </ion-card-content>
     </ion-card>
   </div>

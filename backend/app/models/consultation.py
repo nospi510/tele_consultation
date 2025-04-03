@@ -7,25 +7,24 @@ class Consultation(db.Model):
     symptoms = db.Column(db.Text, nullable=False)
     diagnosis = db.Column(db.Text)
     doctor_id = db.Column(db.Integer, nullable=True)
-    is_ai_diagnosis = db.Column(db.Boolean, default=False) 
+    is_ai_diagnosis = db.Column(db.Boolean, default=False)
     status = db.Column(db.String(50), default="pending")
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     conversation_history = db.Column(db.Text, default="")
-     #  champs pour la notation
-    rating = db.Column(db.Integer, nullable=True) 
-    comment = db.Column(db.String(500), nullable=True) 
-
-      # Champs pour le rappel de médicaments
+    # Champs pour la notation
+    rating = db.Column(db.Integer, nullable=True)
+    comment = db.Column(db.String(500), nullable=True)
+    # Champs pour le rappel de médicaments
     medication_name = db.Column(db.String(100), nullable=True)
     medication_dosage = db.Column(db.String(100), nullable=True)
-    medication_reminder_time = db.Column(db.String(5), nullable=True)  
-    medication_reminder_sent = db.Column(db.Boolean, default=False)  # Indiquer si le rappel a été envoyé
-
+    medication_reminder_time = db.Column(db.String(5), nullable=True)
+    medication_reminder_sent = db.Column(db.Boolean, default=False)
 
     user = db.relationship('User', backref=db.backref('consultations', lazy=True))
 
     def __repr__(self):
         return f"<Consultation {self.id} - User {self.user_id}>"
+
 
 class Appointment(db.Model):
     id = db.Column(db.Integer, primary_key=True)

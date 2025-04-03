@@ -12,9 +12,11 @@
     <ion-grid>
       <ion-row>
         <ion-col size="12" size-md="6" size-lg="4" *ngFor="let consultation of consultations">
-          <ion-card class="consultation-card" button (click)="goToConsultationDetail(consultation.id)">
+          <ion-card class="consultation-card glass-effect" button (click)="goToConsultationDetail(consultation.id)">
+            <div class="card-overlay"></div>
             <ion-card-header class="card-header">
               <ion-card-title class="patient-title">
+                <ion-icon name="person-outline" class="header-icon"></ion-icon>
                 {{ consultation.patient_name }}
               </ion-card-title>
               <ion-card-subtitle class="symptom-text">
@@ -22,13 +24,13 @@
               </ion-card-subtitle>
             </ion-card-header>
             <ion-card-content class="card-content">
-              <ion-item lines="none" class="info-item">
+              <ion-item lines="none" class="info-item glow-effect">
                 <ion-icon name="checkmark-circle-outline" slot="start" class="info-icon"></ion-icon>
                 <ion-label>{{ consultation.status }}</ion-label>
               </ion-item>
-              <ion-item lines="none" class="info-item">
+              <ion-item lines="none" class="info-item glow-effect">
                 <ion-icon name="calendar-outline" slot="start" class="info-icon"></ion-icon>
-                <ion-label>{{ consultation.created_at | date:'medium' }}</ion-label>
+                <ion-label>{{ consultation.created_at | date:'dd MMM yyyy, HH:mm' }}</ion-label>
               </ion-item>
             </ion-card-content>
           </ion-card>

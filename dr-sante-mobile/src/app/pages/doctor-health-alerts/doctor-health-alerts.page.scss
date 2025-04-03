@@ -1,80 +1,151 @@
-.alerts-background {
-  --background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
-  height: 100%;
+$primary-gradient: linear-gradient(135deg, #4f46e5, #7c3aed); // Violet-indigo
+$secondary-gradient: linear-gradient(135deg, #10b981, #34d399); // Vert émeraude
+$card-bg: rgba(255, 255, 255, 0.95);
+$shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+$hover-scale: scale(1.05);
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
-.alerts-container {
-  padding: 20px;
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+  100% { transform: scale(1); }
 }
 
 .header-gradient {
-  --background: linear-gradient(90deg, #1e3a8a 0%, #3b82f6 100%);
+  --background: #{$primary-gradient};
   --color: white;
-
+  padding: 10px 15px;
+  ion-title {
+    font-weight: 700;
+    font-size: 1.5rem;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  }
   .back-btn {
     --color: white;
-    font-size: 1.5rem;
-    transition: transform 0.2s ease;
-
+    --background: transparent;
+    --border-radius: 50%;
+    --padding-start: 10px;
+    --padding-end: 10px;
+    ion-icon {
+      font-size: 1.8rem;
+      transition: transform 0.3s ease;
+    }
     &:hover {
-      transform: scale(1.1);
+      ion-icon {
+        transform: translateX(-5px);
+      }
     }
   }
 }
 
+.alerts-background {
+  --background: linear-gradient(180deg, #e0e7ff 0%, #f3e8ff 100%);
+  padding: 20px;
+}
+
+.alerts-container {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
 .alert-card {
-  border-radius: 15px;
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
-  background: rgba(255, 255, 255, 0.95);
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
-  cursor: pointer;
-  animation: fade-in 0.5s ease-in-out;
+  border-radius: 20px;
+  background: $card-bg;
+  box-shadow: $shadow;
+  transition: all 0.3s ease;
+  animation: fadeInUp 0.6s ease-out;
+  position: relative;
+  overflow: hidden;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, #ef4444, #f87171); // Rouge pour alerte
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    z-index: 0;
+  }
 
   &:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15);
+    transform: $hover-scale;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
+    &::before {
+      opacity: 0.1;
+    }
+    .alert-icon {
+      animation: pulse 1s infinite;
+    }
   }
 
   .card-header {
-    background: linear-gradient(135deg, #b91c1c, #ef4444);
-    border-radius: 15px 15px 0 0;
+    background: $primary-gradient;
     padding: 15px;
-    text-align: center;
+    border-radius: 20px 20px 0 0;
+    position: relative;
+    z-index: 1;
 
     .patient-title {
       color: white;
       font-size: 1.4rem;
       font-weight: 600;
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
     }
   }
 
   .card-content {
     padding: 15px;
+    position: relative;
+    z-index: 1;
 
     .symptom-item {
-      --background: transparent;
+      --background: #fee2e2; // Fond rouge clair pour alerte
+      --border-radius: 10px;
+      padding: 10px;
+      transition: all 0.3s ease;
+
+      &:hover {
+        --background: #fecaca;
+      }
 
       .alert-icon {
-        color: #ef4444;
-        font-size: 1.5rem;
-        margin-right: 10px;
+        font-size: 1.8rem;
+        color: #ef4444; // Rouge vif
+        margin-right: 15px;
       }
 
       ion-label {
-        color: #1f2937;
         font-size: 1rem;
+        color: #991b1b;
+        font-weight: 500;
       }
     }
   }
 }
 
-@keyframes fade-in {
-  from {
-    opacity: 0;
-    transform: scale(0.95);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
+@media (max-width: 768px) {
+  .alert-card {
+    .card-header {
+      .patient-title {
+        font-size: 1.2rem;
+      }
+    }
+    .card-content {
+      .symptom-item {
+        ion-label {
+          font-size: 0.9rem;
+        }
+        .alert-icon {
+          font-size: 1.5rem;
+        }
+      }
+    }
   }
 }

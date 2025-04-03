@@ -9,15 +9,17 @@
 
 <ion-content class="ion-padding reminders-background">
   <div class="reminders-container">
-    <ion-grid>
-      <ion-row>
+    <ion-grid class="reminders-grid">
+      <ion-row class="reminders-row">
         <ion-col size="12" size-md="6" size-lg="4" *ngFor="let reminder of reminders">
           <ion-card class="reminder-card">
             <ion-card-header class="card-header">
               <ion-card-title class="medication-title">
+                <ion-icon name="pill-outline" class="title-icon"></ion-icon>
                 {{ reminder.medication_name }}
               </ion-card-title>
               <ion-card-subtitle class="dosage-text">
+                <ion-icon name="water-outline" class="subtitle-icon"></ion-icon>
                 {{ reminder.dosage }}
               </ion-card-subtitle>
             </ion-card-header>
@@ -28,8 +30,9 @@
               </ion-item>
               <ion-item lines="none" class="sent-item">
                 <ion-icon name="calendar-outline" slot="start" class="info-icon"></ion-icon>
-                <ion-label>{{ reminder.sent_at | date:'medium' }}</ion-label>
+                <ion-label>{{ reminder.sent_at | date:'dd MMM yyyy, HH:mm' }}</ion-label>
               </ion-item>
+
             </ion-card-content>
           </ion-card>
         </ion-col>

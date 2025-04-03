@@ -1,109 +1,243 @@
-.home-background {
-  --background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
+// Variables globales pour un thème cohérent
+$primary-gradient: linear-gradient(135deg, #4f46e5, #7c3aed); // Violet-indigo vibrant
+$secondary-gradient: linear-gradient(135deg, #10b981, #34d399); // Vert émeraude
+$card-bg: rgba(255, 255, 255, 0.95);
+$shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+$hover-scale: scale(1.05);
+
+// Animation d'entrée
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+  100% { transform: scale(1); }
+}
+
+// Styles pour l'en-tête
+.header-gradient {
+  --background: #{$primary-gradient};
+  --color: white;
+  padding: 10px 15px;
+  ion-title {
+    font-weight: 700;
+    font-size: 1.5rem;
+    letter-spacing: 0.5px;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  }
+  .logout-btn {
+    --background: transparent;
+    --color: white;
+    --border-radius: 50%;
+    --padding-start: 10px;
+    --padding-end: 10px;
+    ion-icon {
+      font-size: 1.8rem;
+      transition: transform 0.3s ease;
+    }
+    &:hover {
+      ion-icon {
+        transform: rotate(180deg);
+      }
+    }
+  }
+}
+
+// Fond général
+.home-background,
+.doctor-background {
+  --background: linear-gradient(180deg, #e0e7ff 0%, #f3e8ff 100%); // Fond doux violet clair
   display: flex;
   justify-content: center;
   align-items: center;
-  height: 100%;
+  min-height: 100vh;
+  padding: 20px;
 }
 
+// Conteneur principal
 .dashboard-container {
   display: flex;
   justify-content: center;
   align-items: center;
-  height: 100%;
-  padding: 20px;
+  width: 100%;
+  max-width: 900px;
+  margin: 0 auto;
 }
 
+// Carte principale
 .dashboard-card {
-  border-radius: 20px;
-  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
-  background: rgba(255, 255, 255, 0.95);
-  max-width: 600px;
+  border-radius: 25px;
+  background: $card-bg;
+  box-shadow: $shadow;
   width: 100%;
-  animation: slide-up 0.5s ease-in-out;
+  animation: fadeInUp 0.6s ease-out;
+  overflow: hidden;
+  transition: transform 0.3s ease;
+
+  &:hover {
+    transform: translateY(-5px);
+  }
 
   .card-header {
+    background: $primary-gradient;
+    padding: 20px;
     text-align: center;
-    padding-bottom: 15px;
+    border-radius: 25px 25px 0 0;
 
     .title-gradient {
       font-size: 2rem;
-      font-weight: 700;
-      background: linear-gradient(90deg, #1e3a8a, #3b82f6);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
+      font-weight: 800;
+      color: white;
+      text-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
     }
 
     .user-info {
-      color: #6b7280;
+      color: rgba(255, 255, 255, 0.9);
       font-size: 1rem;
       margin-top: 8px;
-
       span {
-        margin: 0 5px;
+        padding: 0 5px;
       }
     }
   }
 
   .dashboard-content {
-    padding: 20px;
+    padding: 25px;
   }
 }
 
-.header-gradient {
-  --background: linear-gradient(90deg, #1e3a8a 0%, #3b82f6 100%);
-  --color: white;
-
-  .logout-btn {
-    --color: white;
-    font-size: 1.5rem;
-    transition: transform 0.2s ease;
-
-    &:hover {
-      transform: scale(1.1);
-    }
-  }
-}
-
+// Grille d'actions
 .action-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); /* Ajustement responsive */
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 20px;
+  padding: 10px;
+
+  .action-card {
+    background: white;
+    border-radius: 15px;
+    padding: 20px;
+    text-align: center;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+
+    &::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: $secondary-gradient;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      z-index: 0;
+    }
+
+    &:hover {
+      transform: $hover-scale;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+      &::before {
+        opacity: 0.1;
+      }
+      .action-icon {
+        animation: pulse 1s infinite;
+      }
+    }
+
+    .action-icon {
+      font-size: 2.5rem;
+      margin-bottom: 10px;
+      z-index: 1;
+      position: relative;
+    }
+
+    ion-label {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: #1f2937;
+      z-index: 1;
+      position: relative;
+    }
+
+    // Couleurs spécifiques pour chaque icône
+    &:nth-child(1) .action-icon { color: #ef4444; } // Rouge pour medkit
+    &:nth-child(2) .action-icon { color: #3b82f6; } // Bleu pour time/history
+    &:nth-child(3) .action-icon { color: #10b981; } // Vert pour calendar
+    &:nth-child(4) .action-icon { color: #f59e0b; } // Orange pour alarm
+    &:nth-child(5) .action-icon { color: #8b5cf6; } // Violet pour pill
+    &:nth-child(6) .action-icon { color: #ec4899; } // Rose pour videocam
+    &:nth-child(7) .action-icon { color: #6366f1; } // Indigo pour tv/list
+    &:nth-child(8) .action-icon { color: #14b8a6; } // Teal pour calendar (doctor)
+  }
 }
 
-.action-card {
+// Styles spécifiques pour le tableau de bord médecin
+.availability-item {
+  background: #f3f4f6;
   border-radius: 15px;
-  background: linear-gradient(135deg, #3b82f6, #60a5fa);
-  color: white;
-  text-align: center;
-  padding: 20px;
-  cursor: pointer;
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  padding: 15px;
+  margin-bottom: 25px;
+  transition: background 0.3s ease;
 
-  &:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
-  }
-
-  .action-icon {
-    font-size: 2.5rem;
-    margin-bottom: 10px;
+  .status-icon {
+    font-size: 1.8rem;
+    color: #10b981;
+    margin-right: 15px;
   }
 
   ion-label {
-    font-size: 1rem;
-    font-weight: 500;
-    display: block;
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: #1f2937;
+  }
+
+  .availability-toggle {
+    --background: #e5e7eb;
+    --background-checked: #10b981;
+    --handle-background: white;
+    --handle-background-checked: white;
+  }
+
+  &:hover {
+    background: #e5e7eb;
   }
 }
 
-@keyframes slide-up {
-  from {
-    transform: translateY(50px);
-    opacity: 0;
+// Responsive design
+@media (max-width: 600px) {
+  .action-grid {
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 15px;
   }
-  to {
-    transform: translateY(0);
-    opacity: 1;
+
+  .dashboard-card {
+    .card-header {
+      .title-gradient {
+        font-size: 1.5rem;
+      }
+    }
+  }
+
+  .action-card {
+    padding: 15px;
+    .action-icon {
+      font-size: 2rem;
+    }
+    ion-label {
+      font-size: 1rem;
+    }
   }
 }

@@ -1,3 +1,37 @@
 <ion-app>
   <ion-router-outlet></ion-router-outlet>
+  
+  <ion-tabs>
+    <ion-tab-bar slot="bottom" class="tab-bar">
+      <ion-tab-button tab="home" class="tab-button">
+        <ion-icon name="home-outline"></ion-icon>
+        <ion-label>Accueil</ion-label>
+        <div class="tab-indicator"></div>
+      </ion-tab-button>
+      
+      <ion-tab-button tab="consultation" class="tab-button">
+        <ion-icon name="medkit-outline"></ion-icon>
+        <ion-label>Consultation</ion-label>
+        <div class="tab-indicator"></div>
+      </ion-tab-button>
+      
+      <ion-tab-button tab="appointments" class="tab-button">
+        <ion-icon name="calendar-outline"></ion-icon>
+        <ion-label>RDV</ion-label>
+        <div class="tab-indicator"></div>
+      </ion-tab-button>
+      
+      <ion-tab-button tab="health" class="tab-button">
+        <ion-icon name="heart-outline"></ion-icon>
+        <ion-label>Santé</ion-label>
+        <div class="tab-indicator"></div>
+      </ion-tab-button>
+      
+      <ion-tab-button tab="profile" class="tab-button" [routerLink]="['/doctor-dashboard']">
+        <ion-icon name="person-outline"></ion-icon>
+        <ion-label>Profil</ion-label>
+        <div class="tab-indicator"></div>
+      </ion-tab-button>
+    </ion-tab-bar>
+  </ion-tabs>
 </ion-app>

@@ -24,14 +24,17 @@ export class LoginPage {
 
   async login() {
     try {
-      // Appel à la méthode login de AuthService
-      await this.authService.login(this.email, this.password).toPromise();
+      const response = await this.authService.login(this.email, this.password).toPromise();
+      console.log('Réponse complète du backend:', response); // Débogage détaillé
 
-      // Récupération du rôle après la connexion réussie
+      // Vérifie que le token et le rôle sont bien stockés
+      console.log('Token stocké:', localStorage.getItem('token'));
+      console.log('Rôle stocké:', localStorage.getItem('user_role'));
+      console.log('ID utilisateur stocké:', localStorage.getItem('user_id'));
+
       const role = this.authService.getUserRole();
-      console.log('Rôle récupéré après connexion :', role); // Ajout pour débogage
+      console.log('Rôle récupéré après connexion :', role);
 
-      // Redirection basée sur le rôle
       if (role === 'doctor') {
         this.router.navigate(['/doctor-dashboard']);
       } else if (role === 'patient') {
@@ -41,6 +44,7 @@ export class LoginPage {
         this.router.navigate(['/home']);
       }
     } catch (error) {
+      console.error('Erreur de connexion:', error);
       const toast = await this.toastController.create({
         message: 'Erreur de connexion : identifiants invalides',
         duration: 2000,

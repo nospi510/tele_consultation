@@ -21,6 +21,13 @@ const routes: Routes = [
   { path: 'doctor/send-notification', loadChildren: () => import('./pages/doctor-send-notification/doctor-send-notification.module').then(m => m.DoctorSendNotificationPageModule) },
   { path: 'doctor/upcoming-appointments', loadChildren: () => import('./pages/doctor-upcoming-appointments/doctor-upcoming-appointments.module').then(m => m.DoctorUpcomingAppointmentsPageModule) },
   { path: 'patient-medication-reminders',loadChildren: () => import('./pages/patient-medication-reminders/patient-medication-reminders.module').then( m => m.PatientMedicationRemindersPageModule)},
+  { path: 'live-tv',loadChildren: () => import('./pages/live-tv/live-tv.module').then( m => m.LiveTvPageModule)},
+  { path: 'live-list',loadChildren: () => import('./pages/live-list/live-list.module').then( m => m.LiveListPageModule)},
+  { path: 'live-session/:id', loadChildren: () => import('./pages/live-session/live-session.module').then(m => m.LiveSessionPageModule) }
+
+
+
+
 ];
 
 @NgModule({

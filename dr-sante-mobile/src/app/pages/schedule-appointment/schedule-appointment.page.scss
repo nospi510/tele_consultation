@@ -1,133 +1,235 @@
-.schedule-background {
-  --background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 100%;
+// Variables globales cohérentes avec le design précédent
+$primary-gradient: linear-gradient(135deg, #4f46e5, #7c3aed); // Violet-indigo
+$secondary-gradient: linear-gradient(135deg, #10b981, #34d399); // Vert émeraude
+$card-bg: rgba(255, 255, 255, 0.95);
+$shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+$hover-scale: scale(1.05);
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
-.schedule-container {
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+  100% { transform: scale(1); }
+}
+
+// En-tête
+.header-gradient {
+  --background: #{$primary-gradient};
+  --color: white;
+  padding: 10px 15px;
+  ion-title {
+    font-weight: 700;
+    font-size: 1.5rem;
+    letter-spacing: 0.5px;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  }
+  .home-btn {
+    --background: transparent;
+    --color: white;
+    --border-radius: 50%;
+    --padding-start: 10px;
+    --padding-end: 10px;
+    ion-icon {
+      font-size: 1.8rem;
+      transition: transform 0.3s ease;
+    }
+    &:hover {
+      ion-icon {
+        transform: rotate(360deg);
+      }
+    }
+  }
+}
+
+// Fond
+.schedule-background {
+  --background: linear-gradient(180deg, #e0e7ff 0%, #f3e8ff 100%);
   display: flex;
   justify-content: center;
   align-items: center;
-  height: 100%;
+  min-height: 100vh;
   padding: 20px;
 }
 
-.schedule-card {
-  border-radius: 20px;
-  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
-  background: rgba(255, 255, 255, 0.95);
-  max-width: 500px;
+// Conteneur
+.schedule-container {
   width: 100%;
-  animation: slide-up 0.5s ease-in-out;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+// Carte
+.schedule-card {
+  border-radius: 25px;
+  background: $card-bg;
+  box-shadow: $shadow;
+  animation: fadeInUp 0.6s ease-out;
+  transition: transform 0.3s ease;
+  overflow: hidden;
+
+  &:hover {
+    transform: translateY(-5px);
+  }
 
   .card-header {
+    background: $primary-gradient;
+    padding: 20px;
     text-align: center;
-    padding-bottom: 15px;
+    border-radius: 25px 25px 0 0;
 
     .title-gradient {
       font-size: 2rem;
-      font-weight: 700;
-      background: linear-gradient(90deg, #1e3a8a, #3b82f6);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
+      font-weight: 800;
+      color: white;
+      text-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      .header-icon {
+        font-size: 2rem;
+        margin-right: 10px;
+        color: #f3e8ff;
+        animation: pulse 2s infinite;
+      }
     }
 
-    ion-card-subtitle {
-      color: #6b7280;
-      font-size: 1rem;
-      margin-top: 5px;
+    .subtitle-text {
+      color: rgba(255, 255, 255, 0.9);
+      font-size: 1.1rem;
+      margin-top: 8px;
+      font-style: italic;
     }
   }
 
   .schedule-content {
-    padding: 20px;
-  }
-}
+    padding: 25px;
 
-.header-gradient {
-  --background: linear-gradient(90deg, #1e3a8a 0%, #3b82f6 100%);
-  --color: white;
+    .input-item {
+      --background: #f3f4f6;
+      border-radius: 15px;
+      padding: 15px;
+      margin-bottom: 20px;
+      transition: all 0.3s ease;
 
-  .home-btn {
-    --color: white;
-    font-size: 1.5rem;
-    transition: transform 0.2s ease;
+      &:hover {
+        --background: #e5e7eb;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+      }
 
-    &:hover {
-      transform: scale(1.1);
+      .input-icon {
+        font-size: 1.8rem;
+        color: #4f46e5;
+        margin-right: 15px;
+      }
+
+      ion-label {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #1f2937;
+      }
+
+      ion-select {
+        width: 100%;
+        --padding-start: 10px;
+        font-size: 1rem;
+        color: #1f2937;
+      }
+
+      .date-input {
+        --padding-start: 10px;
+        font-size: 1rem;
+        color: #1f2937;
+        cursor: pointer;
+      }
+
+      ion-input {
+        --placeholder-color: #9ca3af;
+      }
+    }
+
+    .schedule-button {
+      --background: #{$secondary-gradient};
+      --border-radius: 15px;
+      --padding-top: 12px;
+      --padding-bottom: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      transition: all 0.3s ease;
+      margin-top: 20px;
+
+      &:hover {
+        --background: linear-gradient(135deg, #059669, #10b981);
+        transform: $hover-scale;
+      }
+
+      &:disabled {
+        --background: #d1d5db;
+        --opacity: 0.7;
+      }
+
+      ion-icon {
+        margin-left: 10px;
+        font-size: 1.5rem;
+      }
+
+      ion-spinner {
+        margin-right: 10px;
+      }
     }
   }
 }
 
-.input-item {
-  --background: #f3f4f6;
-  --border-radius: 12px;
-  margin-bottom: 20px;
-  padding: 10px;
+// Popover pour le datetime
+ion-popover {
+  --background: #ffffff;
+  --box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+  --border-radius: 15px;
 
-  ion-label {
-    color: #4b5563;
-    font-weight: 500;
-    margin-right: 10px;
-  }
-
-  ion-select, ion-datetime {
+  ion-datetime {
+    --background: #ffffff;
     --color: #1f2937;
-    --placeholder-color: #9ca3af;
-    font-size: 1rem;
-    width: 100%;
-  }
-
-  .input-icon {
-    color: #3b82f6;
-    font-size: 1.5rem;
-    margin-right: 15px;
+    border-radius: 15px;
+    padding: 15px;
   }
 }
 
-ion-input {
-  --color: #1f2937;
-  --placeholder-color: #9ca3af;
-  font-size: 1rem;
-  cursor: pointer;
-}
-
-.schedule-button {
-  --background: linear-gradient(90deg, #15803d, #22c55e);
-  --border-radius: 12px;
-  --padding-top: 12px;
-  --padding-bottom: 12px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  transition: transform 0.2s ease;
-
-  ion-input {
-  --color: #1f2937;
-  --placeholder-color: #9ca3af;
-  font-size: 1rem;
-  cursor: pointer;
-}
-
-  &:hover {
-    --background: linear-gradient(90deg, #166534, #4ade80);
-    transform: scale(1.05);
-  }
-
-  ion-icon {
-    margin-left: 10px;
-  }
-}
-
-@keyframes slide-up {
-  from {
-    transform: translateY(50px);
-    opacity: 0;
-  }
-  to {
-    transform: translateY(0);
-    opacity: 1;
+// Responsive
+@media (max-width: 600px) {
+  .schedule-card {
+    .card-header {
+      .title-gradient {
+        font-size: 1.5rem;
+        .header-icon {
+          font-size: 1.5rem;
+        }
+      }
+      .subtitle-text {
+        font-size: 0.9rem;
+      }
+    }
+    .schedule-content {
+      padding: 15px;
+      .input-item {
+        padding: 10px;
+        .input-icon {
+          font-size: 1.5rem;
+        }
+        ion-label {
+          font-size: 1rem;
+        }
+      }
+    }
   }
 }
