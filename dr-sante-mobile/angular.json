@@ -31,7 +31,10 @@
                 "output": "./svg"
               }
             ],
-            "styles": ["src/global.scss", "src/theme/variables.scss"],
+            "styles": [
+              "src/global.scss", "src/theme/variables.scss",
+              "node_modules/video.js/dist/video-js.css"
+            ],
             "scripts": []
           },
           "configurations": {

@@ -1,7 +1,9 @@
 let userData = null;
 
 // URL de la playlist M3U
-const m3uUrl = 'https://raw.githubusercontent.com/Free-TV/IPTV/master/playlist.m3u8';
+const m3uUrl = 'https://iptv-org.github.io/iptv/countries/fr.m3u';
+// const m3uUrl = 'https://raw.githubusercontent.com/Free-TV/IPTV/master/playlist.m3u8';
+
 
 function initApp() {
     try {

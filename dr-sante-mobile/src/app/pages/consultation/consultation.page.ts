@@ -21,7 +21,8 @@ export class ConsultationPage implements OnInit, OnDestroy {
   isLoading: boolean = false;
   countdown: number = 10;
   consultationStarted: boolean = false;
-  messages: { sender: string; text: string }[] = [];
+  // Ajout de la propriété timestamp dans l'interface des messages
+  messages: { sender: string; text: string; timestamp: Date }[] = [];
   newMessage: string = '';
   consultationId: number | null = null;
   consultation: any = {};
@@ -74,7 +75,8 @@ export class ConsultationPage implements OnInit, OnDestroy {
           diagnosis: response.is_ai_diagnosis ? response.diagnosis : 'En attente',
           status: 'pending'
         };
-        this.messages.push({ sender: 'Patient', text: this.symptoms });
+        // Ajout du message initial avec timestamp
+        this.messages.push({ sender: 'Patient', text: this.symptoms, timestamp: new Date() });
 
         if (this.consultationId) {
           this.socket.emit('join_consultation', { consultation_id: this.consultationId });
@@ -95,6 +97,7 @@ export class ConsultationPage implements OnInit, OnDestroy {
     );
   }
 
+  // Mise à jour de la méthode pour inclure timestamp
   updateMessages(conversationHistory: string) {
     this.messages = [];
     if (conversationHistory) {
@@ -104,8 +107,18 @@ export class ConsultationPage implements OnInit, OnDestroy {
           const [sender, ...textParts] = line.split(': ');
           const senderText = sender.trim();
           const messageText = textParts.join(': ').trim();
-          if (!this.messages.some(msg => msg.sender === senderText && msg.text === messageText)) {
-            this.messages.push({ sender: senderText, text: messageText });
+          // Supposons que le backend inclut un timestamp dans le format "sender: text [timestamp]"
+          const timestampMatch = messageText.match(/\[(.*?)\]$/);
+          let messageContent = messageText;
+          let timestamp = new Date(); // Par défaut, date actuelle si aucun timestamp n'est fourni
+
+          if (timestampMatch) {
+            messageContent = messageText.replace(timestampMatch[0], '').trim();
+            timestamp = new Date(timestampMatch[1]);
+          }
+
+          if (!this.messages.some(msg => msg.sender === senderText && msg.text === messageContent)) {
+            this.messages.push({ sender: senderText, text: messageContent, timestamp });
           }
         }
       });
@@ -125,7 +138,8 @@ export class ConsultationPage implements OnInit, OnDestroy {
     const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`);
     const messageToSend = this.newMessage;
 
-    this.messages.push({ sender: 'Patient', text: messageToSend });
+    // Ajout du message avec timestamp
+    this.messages.push({ sender: 'Patient', text: messageToSend, timestamp: new Date() });
     this.newMessage = '';
     this.socket.emit('typing', { consultation_id: this.consultationId, user_role: 'patient', is_typing: false });
 

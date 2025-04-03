@@ -1,0 +1,59 @@
+<ion-header translucent>
+  <ion-toolbar class="header-gradient">
+    <ion-buttons slot="start">
+      <ion-back-button defaultHref="/home" class="back-btn"></ion-back-button>
+    </ion-buttons>
+    <ion-title class="header-title">TV en Direct</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding live-tv-background">
+  <div class="live-tv-container">
+    <!-- Zone vidéo principale -->
+    <div class="video-wrapper">
+      <div class="video-container">
+        <video
+          #videoPlayer
+          class="video-js vjs-default-skin vjs-big-play-centered live-video"
+          controls
+          autoplay
+          *ngIf="selectedChannel"
+        ></video>
+        <div class="video-placeholder" *ngIf="!selectedChannel">
+          <ion-icon name="tv-outline" class="placeholder-icon"></ion-icon>
+          <ion-text>Sélectionnez une chaîne dans le menu</ion-text>
+        </div>
+        <ion-text class="channel-name" *ngIf="selectedChannel">{{ selectedChannel.name }}</ion-text>
+      </div>
+    </div>
+
+    <!-- Bulle flottante pour les chaînes -->
+    <div class="channel-bubble">
+      <div class="bubble-header" (click)="toggleChannels()">
+        <ion-icon [name]="channelsOpen ? 'chevron-down' : 'chevron-forward'" class="bubble-icon"></ion-icon>
+        <span>Chaînes</span>
+      </div>
+      <div class="bubble-content" [ngClass]="{'open': channelsOpen}">
+        <ion-list class="channel-list">
+          <ion-item
+            *ngFor="let channel of channels"
+            (click)="playChannel(channel)"
+            class="channel-item"
+            [ngClass]="{'selected': channel === selectedChannel}"
+          >
+            <ion-icon name="tv-outline" slot="start" class="channel-icon"></ion-icon>
+            <ion-label>{{ channel.name }}</ion-label>
+          </ion-item>
+          <ion-item *ngIf="loading" class="loading-item">
+            <ion-spinner name="dots" slot="start"></ion-spinner>
+            <ion-label>Chargement...</ion-label>
+          </ion-item>
+          <ion-item *ngIf="error" class="error-item">
+            <ion-icon name="warning-outline" slot="start" class="error-icon"></ion-icon>
+            <ion-label>{{ error }}</ion-label>
+          </ion-item>
+        </ion-list>
+      </div>
+    </div>
+  </div>
+</ion-content>

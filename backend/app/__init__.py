@@ -1,3 +1,4 @@
+from datetime import timedelta
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
@@ -9,11 +10,12 @@ from flask_socketio import SocketIO
 
 db = SQLAlchemy()
 jwt = JWTManager()
-socketio = SocketIO()  # Déclare socketio globalement
+socketio = SocketIO(cors_allowed_origins="*")  # Assurez-vous que ceci est présent
 
 def create_app():
     app = Flask(__name__)
     app.config.from_object('app.config.Config')
+    app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(hours=24)  # Token valable 24h
 
     db.init_app(app)
     Migrate(app, db)
@@ -38,6 +40,7 @@ def create_app():
 
     # Initialisation de SocketIO
     socketio.init_app(app, cors_allowed_origins="*") 
+    
 
     # Importation des Blueprints
     from app.routes.auth_routes import auth_bp

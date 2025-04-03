@@ -19,7 +19,7 @@ import { Socket } from 'ngx-socket-io';
 export class ConsultationDetailPage implements OnInit, OnDestroy {
   consultation: any = {};
   newMessage: string = '';
-  messages: { sender: string; text: string }[] = [];
+  messages: { sender: string; text: string; timestamp: Date }[] = []; // Ajout de timestamp
   isDoctorTyping: boolean = false;
   callProposed: boolean = false;
   inCall: boolean = false;
@@ -107,7 +107,11 @@ export class ConsultationDetailPage implements OnInit, OnDestroy {
       .filter(line => line.trim())
       .map(line => {
         const [sender, ...textParts] = line.split(': ');
-        return { sender: sender.trim(), text: textParts.join(': ').trim() };
+        return {
+          sender: sender.trim(),
+          text: textParts.join(': ').trim(),
+          timestamp: new Date() // Timestamp généré côté client (approximation si pas fourni par le serveur)
+        };
       });
     this.messages = newMessages.filter((msg, index, self) =>
       index === self.findIndex(m => m.sender === msg.sender && m.text === msg.text)
@@ -134,8 +138,9 @@ export class ConsultationDetailPage implements OnInit, OnDestroy {
     const token = this.authService.getToken();
     const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`);
     const messageToSend = this.newMessage;
+    const timestamp = new Date(); // Générer le timestamp au moment de l'envoi
 
-    this.messages.push({ sender: 'Patient', text: messageToSend });
+    this.messages.push({ sender: 'Patient', text: messageToSend, timestamp }); // Ajouter le timestamp
     this.newMessage = '';
     this.socket.emit('typing', { consultation_id: this.consultation.id, user_role: 'patient', is_typing: false });
 
@@ -199,7 +204,7 @@ export class ConsultationDetailPage implements OnInit, OnDestroy {
       };
     } catch (error) {
       console.error('Patient - Erreur WebRTC:', error);
-      this.showToast('Erreur lors de l’initialisation de l’appel: ' , 'danger');
+      this.showToast('Erreur lors de l’initialisation de l’appel', 'danger');
       this.inCall = false;
     }
   }

@@ -27,7 +27,6 @@ export class AuthService {
         if (response.user_role) {
           localStorage.setItem('user_role', response.user_role);
         }
-        // Optionnel : Stocker l’ID si renvoyé directement dans la réponse
         if (response.user_id) {
           localStorage.setItem('user_id', response.user_id);
         }
@@ -54,11 +53,16 @@ export class AuthService {
     return !!token && !this.jwtHelper.isTokenExpired(token);
   }
 
+  isDoctor(): boolean {
+    const role = this.getUserRole();
+    return role === 'doctor';
+  }
+
   getUserId(): string | null {
     const token = this.getToken();
     if (token) {
       const decoded = this.jwtHelper.decodeToken(token);
-      return decoded.user_id || decoded.id || decoded.sub || null; // Ajuste selon ton JWT
+      return decoded.user_id || decoded.id || decoded.sub || null;
     }
     return null;
   }

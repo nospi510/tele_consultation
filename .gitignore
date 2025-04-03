@@ -5,3 +5,4 @@ backend/app/models/__pycache__
 backend/app/routes/__pycache__
 backend/app/services/__pycache__
 backend/migrations
+mediasoup-server/node_modules

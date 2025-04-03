@@ -9,17 +9,19 @@
 
 <ion-content class="ion-padding report-background">
   <div class="report-container">
-    <!-- Sélection du patient -->
     <ion-card class="selection-card">
       <ion-card-header class="card-header">
-        <ion-card-title class="title-gradient">Sélectionner un Patient</ion-card-title>
+        <ion-card-title class="title-gradient">
+          <ion-icon name="document-text-outline" class="header-icon"></ion-icon>
+          Sélectionner un Patient
+        </ion-card-title>
         <ion-card-subtitle>Choisissez pour générer un rapport</ion-card-subtitle>
       </ion-card-header>
       <ion-card-content class="selection-content">
         <form (ngSubmit)="generateReport()">
           <ion-item class="input-item" lines="none">
             <ion-icon name="person-outline" slot="start" class="input-icon"></ion-icon>
-            <ion-label>Patient</ion-label>
+            <ion-label position="floating">Patient</ion-label>
             <ion-select [(ngModel)]="patientId" name="patientId" placeholder="Choisir un patient" required>
               <ion-select-option *ngFor="let patient of patients" [value]="patient.id">
                 {{ patient.fullname }} ({{ patient.email }})
@@ -34,7 +36,6 @@
       </ion-card-content>
     </ion-card>
 
-    <!-- Rapport généré -->
     <ion-card class="report-card" *ngIf="report">
       <ion-card-header class="report-header">
         <ion-card-title class="report-title">
@@ -50,7 +51,7 @@
                 <ion-label>
                   <h2>{{ consultation.symptoms }}</h2>
                   <p>Diagnostic : {{ consultation.diagnosis || 'En attente' }}</p>
-                  <p>Date : {{ consultation.created_at | date:'medium' }}</p>
+                  <p>Date : {{ consultation.created_at | date:'dd MMM yyyy, HH:mm' }}</p>
                 </ion-label>
               </ion-item>
             </ion-col>

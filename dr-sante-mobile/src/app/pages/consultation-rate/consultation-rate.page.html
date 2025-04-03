@@ -1,26 +1,33 @@
-<ion-header>
-  <ion-toolbar color="primary">
+<ion-header translucent>
+  <ion-toolbar class="header-gradient">
     <ion-title>Noter la Consultation</ion-title>
   </ion-toolbar>
 </ion-header>
 
-<ion-content class="ion-padding">
-  <ion-card>
-    <ion-card-header>
-      <ion-card-title>Évaluez votre expérience</ion-card-title>
-    </ion-card-header>
-    <ion-card-content>
-      <ion-item>
-        <ion-label>Note (1-5)</ion-label>
-        <ion-range min="1" max="5" step="1" [(ngModel)]="rating" color="primary" pin="true"></ion-range>
-      </ion-item>
-      <ion-item>
-        <ion-label position="floating">Commentaire</ion-label>
-        <ion-textarea [(ngModel)]="comment" rows="3"></ion-textarea>
-      </ion-item>
-      <ion-button expand="block" color="success" (click)="rateConsultation()" [disabled]="rating < 1 || rating > 5">
-        Envoyer l’évaluation
-      </ion-button>
-    </ion-card-content>
-  </ion-card>
+<ion-content class="ion-padding rating-background">
+  <div class="rating-container">
+    <ion-card class="rating-card">
+      <ion-card-header class="card-header">
+        <ion-card-title class="title-gradient">
+          <ion-icon name="star-outline" class="header-icon"></ion-icon>
+          Évaluez votre expérience
+        </ion-card-title>
+      </ion-card-header>
+      <ion-card-content class="rating-content">
+        <ion-item class="rating-item" lines="none">
+          <ion-label>Note (1-5)</ion-label>
+          <ion-range min="1" max="5" step="1" [(ngModel)]="rating" color="warning" pin="true" class="rating-range"></ion-range>
+        </ion-item>
+        <ion-item class="input-item" lines="none">
+          <ion-icon name="chatbubble-outline" slot="start" class="input-icon"></ion-icon>
+          <ion-label position="floating">Commentaire</ion-label>
+          <ion-textarea [(ngModel)]="comment" rows="3" placeholder="Votre avis..."></ion-textarea>
+        </ion-item>
+        <ion-button expand="block" class="submit-button" (click)="rateConsultation()" [disabled]="rating < 1 || rating > 5">
+          Envoyer l’évaluation
+          <ion-icon name="checkmark-outline" slot="end"></ion-icon>
+        </ion-button>
+      </ion-card-content>
+    </ion-card>
+  </div>
 </ion-content>

@@ -11,14 +11,17 @@
   <div class="reminder-container">
     <ion-card class="reminder-card">
       <ion-card-header class="card-header">
-        <ion-card-title class="title-gradient">Envoyer un Rappel</ion-card-title>
+        <ion-card-title class="title-gradient">
+          <ion-icon name="alarm-outline" class="header-icon"></ion-icon>
+          Envoyer un Rappel
+        </ion-card-title>
         <ion-card-subtitle>Pour vos patients</ion-card-subtitle>
       </ion-card-header>
       <ion-card-content class="reminder-content">
         <form (ngSubmit)="sendReminder()">
           <ion-item class="input-item" lines="none">
             <ion-icon name="person-outline" slot="start" class="input-icon"></ion-icon>
-            <ion-label>Patient</ion-label>
+            <ion-label position="floating">Patient</ion-label>
             <ion-select [(ngModel)]="patientId" name="patientId" placeholder="Choisir un patient" required>
               <ion-select-option *ngFor="let patient of patients" [value]="patient.id">
                 {{ patient.fullname }} ({{ patient.email }})
@@ -27,7 +30,7 @@
           </ion-item>
           <ion-item class="input-item" lines="none">
             <ion-icon name="pill-outline" slot="start" class="input-icon"></ion-icon>
-            <ion-label position="floating">Nom du Médicament</ion-label>
+            <ion-label position="floating">Médicament</ion-label>
             <ion-input [(ngModel)]="medicationName" name="medicationName" placeholder="Ex: Paracétamol" required></ion-input>
           </ion-item>
           <ion-item class="input-item" lines="none">
@@ -37,7 +40,7 @@
           </ion-item>
           <ion-item class="input-item" lines="none">
             <ion-icon name="time-outline" slot="start" class="input-icon"></ion-icon>
-            <ion-label>Heure</ion-label>
+            <ion-label position="floating">Heure</ion-label>
             <ion-input 
               value="{{ time | date:'HH:mm' }}" 
               placeholder="Choisir une heure" 
