@@ -1,62 +1,104 @@
-import { Component, OnInit } from '@angular/core';
-import { AuthService } from '../../services/auth.service';
-import { HttpClient } from '@angular/common/http';
+import { Component, OnInit, ViewChild } from '@angular/core';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
-import { Router } from '@angular/router';
+import { IonicModule, IonModal } from '@ionic/angular';
 import { CommonModule } from '@angular/common';
-import { IonicModule } from '@ionic/angular';
+import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 import { io } from 'socket.io-client';
+import { AuthService } from '../../services/auth.service';
 
 @Component({
   selector: 'app-live-list',
   templateUrl: './live-list.page.html',
   styleUrls: ['./live-list.page.scss'],
   standalone: true,
-  imports: [IonicModule, CommonModule]
+  imports: [IonicModule, CommonModule, FormsModule]
 })
 export class LiveListPage implements OnInit {
-  sessions: any[] = [];
-  socket: any;
+  @ViewChild('createModal') createModal!: IonModal;
+  sessions: { id: number; title: string; host: string; broadcasters: string[] }[] = [];
+  loading: boolean = true;
+  error: string | null = null;
+  isDoctor: boolean = false;
+  showCreateModal: boolean = false;
+  newSessionTitle: string = '';
+  private socket: any;
 
   constructor(
     private http: HttpClient,
-    public authService: AuthService ,
-    private router: Router
+    private router: Router,
+    private authService: AuthService
   ) {
-    this.socket = io(`${environment.apiUrl}`, { path: '/live' });
+    this.socket = io(`${environment.apiUrl}/live`, {
+      transports: ['websocket'],
+      reconnection: true,
+      reconnectionAttempts: 10,
+      reconnectionDelay: 1000
+    });
   }
 
   ngOnInit() {
-    this.loadSessions();
-    this.socket.on('new_session', (session: any) => {
-      this.sessions.push(session);
+    this.checkUserRole();
+    this.socket.on('connect', () => console.log('WebSocket connecté'));
+    this.socket.on('disconnect', () => console.log('WebSocket déconnecté'));
+    this.socket.on('new_session', (data: any) => {
+      console.log('Nouvelle session reçue:', data);
+      this.sessions.push({ id: data.id, title: data.title, host: data.host, broadcasters: [data.host] });
     });
+    this.loadSessions();
+  }
+
+  checkUserRole() {
+    this.isDoctor = this.authService.isDoctor();
   }
 
   loadSessions() {
+    const token = this.authService.getToken();
     this.http.get(`${environment.apiUrl}/tnt/live-session/list`, {
-      headers: { Authorization: `Bearer ${this.authService.getToken()}` }
-    }).subscribe((data: any) => {
-      this.sessions = data;
+      headers: new HttpHeaders({ Authorization: `Bearer ${token}` })
+    }).subscribe({
+      next: (data: any) => {
+        this.sessions = data;
+        this.loading = false;
+      },
+      error: (err) => {
+        this.error = 'Erreur lors du chargement des sessions.';
+        this.loading = false;
+        console.error('Erreur HTTP:', err);
+      }
     });
   }
 
-  createSession() {
-    if (!this.authService.isDoctor()) {
-      alert('Seuls les docteurs peuvent créer une session');
-      return;
-    }
-    const title = prompt('Entrez le titre de la session :');
-    if (title) {
-      this.http.post(`${environment.apiUrl}/tnt/live-session/create`, { title }, {
-        headers: { Authorization: `Bearer ${this.authService.getToken()}` }
-      }).subscribe((res: any) => {
-        this.router.navigate(['/live-session', res.session_id]);
-      });
+  openCreateModal() {
+    if (this.isDoctor) {
+      this.showCreateModal = true;
+    } else {
+      this.error = 'Seuls les docteurs peuvent créer une session.';
     }
   }
 
-  joinSession(sessionId: number) {
+  closeCreateModal() {
+    this.showCreateModal = false;
+    this.newSessionTitle = '';
+  }
+
+  createSession() {
+    const token = this.authService.getToken();
+    this.http.post(`${environment.apiUrl}/tnt/live-session/create`, { title: this.newSessionTitle }, {
+      headers: new HttpHeaders({ Authorization: `Bearer ${token}` })
+    }).subscribe({
+      next: (response: any) => {
+        this.closeCreateModal();
+        this.router.navigate(['/live-session', response.session_id]);
+      },
+      error: (err) => {
+        this.error = err.error.error || 'Erreur lors de la création.';
+      }
+    });
+  }
+
+  goToSession(sessionId: number) {
     this.router.navigate(['/live-session', sessionId]);
   }
 }
