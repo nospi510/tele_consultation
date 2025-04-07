@@ -14,10 +14,10 @@
       <div class="video-container">
         <video
           #videoPlayer
-          class="video-js vjs-default-skin vjs-big-play-centered live-video"
-          controls
+          class="live-video"
           autoplay
           *ngIf="selectedChannel"
+          controls="false"
         ></video>
         <div class="video-placeholder" *ngIf="!selectedChannel">
           <ion-icon name="tv-outline" class="placeholder-icon"></ion-icon>

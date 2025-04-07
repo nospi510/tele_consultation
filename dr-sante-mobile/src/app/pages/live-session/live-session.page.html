@@ -1,38 +1,53 @@
 <ion-header translucent>
   <ion-toolbar class="header-gradient">
-    <ion-title>Session Live</ion-title>
-    <ion-buttons slot="end">
-      <ion-button *ngIf="authService.isDoctor()" (click)="joinAsBroadcaster()" class="join-btn">
-        <ion-icon name="mic-outline" slot="start"></ion-icon>
-        Participer
+    <ion-buttons slot="start">
+      <ion-back-button defaultHref="/live-list" class="back-btn"></ion-back-button>
+    </ion-buttons>
+    <ion-title class="header-title">{{ sessionTitle }}</ion-title>
+    <ion-buttons slot="end" *ngIf="isDoctor && !isBroadcaster">
+      <ion-button class="join-btn" (click)="joinAsBroadcaster()">
+        Rejoindre comme diffuseur
       </ion-button>
     </ion-buttons>
   </ion-toolbar>
 </ion-header>
 
-<ion-content class="ion-padding live-session-background">
-  <div class="video-container">
-    <video #videoElement autoplay playsinline class="live-video"></video>
-    <ion-badge color="success" class="live-indicator">En Direct</ion-badge>
+<ion-content class="ion-padding live-background">
+  <div class="live-container">
+    <div class="video-section">
+      <div class="video-container">
+        <video #localVideo class="live-video" autoplay muted *ngIf="isBroadcasting"></video>
+        <div class="remote-videos">
+          <video *ngFor="let stream of remoteStreams | keyvalue" class="live-video" autoplay></video>
+        </div>
+        <ion-text class="broadcasters">Diffuseurs : {{ broadcasters.join(', ') }}</ion-text>
+      </div>
+      <ion-button *ngIf="isDoctor && !isBroadcasting" class="start-btn" (click)="startBroadcast()">
+        Démarrer la diffusion
+      </ion-button>
+    </div>
+
+    <div class="chat-section">
+      <ion-card class="chat-card">
+        <ion-card-header class="chat-header">
+          <ion-card-title>Chat en direct</ion-card-title>
+        </ion-card-header>
+        <ion-card-content class="chat-content">
+          <ion-list class="comment-list">
+            <ion-item *ngFor="let comment of comments" class="comment-item">
+              <ion-label>
+                <h3>{{ comment.user }}</h3>
+                <p>{{ comment.comment }}</p>
+                <span class="timestamp">{{ comment.timestamp | date:'short' }}</span>
+              </ion-label>
+            </ion-item>
+          </ion-list>
+          <ion-item class="comment-input">
+            <ion-input [(ngModel)]="newComment" placeholder="Écrire un commentaire..."></ion-input>
+            <ion-button slot="end" (click)="sendComment()">Envoyer</ion-button>
+          </ion-item>
+        </ion-card-content>
+      </ion-card>
+    </div>
   </div>
-
-  <ion-list class="comments-list">
-    <ion-item *ngFor="let comment of comments" class="comment-item">
-      <ion-avatar slot="start" class="comment-avatar">
-        <ion-icon name="person-circle-outline"></ion-icon>
-      </ion-avatar>
-      <ion-label>
-        <h3>{{ comment.user }}</h3>
-        <p>{{ comment.comment }}</p>
-        <ion-text color="medium" class="timestamp">{{ comment.timestamp | date:'HH:mm' }}</ion-text>
-      </ion-label>
-    </ion-item>
-  </ion-list>
-
-  <ion-item class="comment-input" lines="none">
-    <ion-input [(ngModel)]="newComment" placeholder="Ajouter un commentaire..." class="input-field"></ion-input>
-    <ion-button slot="end" (click)="sendComment()" class="send-btn">
-      <ion-icon name="send-outline" slot="icon-only"></ion-icon>
-    </ion-button>
-  </ion-item>
 </ion-content>

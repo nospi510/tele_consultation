@@ -3,7 +3,12 @@ import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 import { IonicModule } from '@ionic/angular';
 import { CommonModule } from '@angular/common';
-import videojs from 'video.js';
+import { VideoPlayerService } from '../../services/video-player.service';
+
+// @ts-ignore
+import Hls from 'hls.js';
+import { NavigationStart, Router } from '@angular/router';
+
 
 @Component({
   selector: 'app-live-tv',
@@ -19,9 +24,22 @@ export class LiveTvPage implements OnInit, OnDestroy {
   loading: boolean = true;
   error: string | null = null;
   channelsOpen: boolean = false;
-  private player: any = null;
+  private hls: Hls | null = null;
 
-  constructor(private http: HttpClient) {}
+  constructor(
+    private http: HttpClient,
+    private router: Router,
+    private videoPlayerService: VideoPlayerService
+  ) {
+    // Écouter les changements de navigation
+    this.router.events.subscribe(event => {
+      if (event instanceof NavigationStart && this.videoPlayerService.isPlaying()) {
+        if (event.url !== '/live-tv') {
+          this.videoPlayerService.moveToMiniature();
+        }
+      }
+    });
+  }
 
   ngOnInit() {
     this.loadChannels();
@@ -50,9 +68,9 @@ export class LiveTvPage implements OnInit, OnDestroy {
   playChannel(channel: { name: string; url: string }) {
     this.selectedChannel = channel;
 
-    if (this.player) {
-      this.player.dispose();
-      this.player = null;
+    if (this.hls) {
+      this.hls.destroy();
+      this.hls = null;
     }
 
     setTimeout(() => {
@@ -74,39 +92,65 @@ export class LiveTvPage implements OnInit, OnDestroy {
     const videoElement = this.videoPlayer.nativeElement;
     videoElement.style.display = 'block';
 
-    this.player = videojs(videoElement, {
-      controls: true,
-      autoplay: true,
-      fluid: false, // Désactiver fluid pour respecter les dimensions du conteneur
-      width: '100%',
-      height: '100%',
-      sources: [{
-        src: url,
-        type: 'application/x-mpegURL'
-      }],
-      html5: {
-        hls: {
-          overrideNative: true
+    if (Hls.isSupported()) {
+      this.hls = new Hls({
+        debug: true,
+        maxBufferLength: 60,
+        maxMaxBufferLength: 120,
+        liveSyncDurationCount: 3,
+        manifestLoadingTimeOut: 20000,
+        levelLoadingTimeOut: 20000,
+        fragLoadingTimeOut: 20000,
+        manifestLoadingMaxRetry: 3,
+        levelLoadingMaxRetry: 3,
+        fragLoadingMaxRetry: 3
+      });
+
+      this.hls.loadSource(url);
+      this.hls.attachMedia(videoElement);
+
+      this.hls.on(Hls.Events.MANIFEST_PARSED, () => {
+        videoElement.play().catch(err => {
+          console.error('Erreur de lecture:', err);
+          this.error = 'Erreur de lecture du flux.';
+        });
+      });
+
+      this.hls.on(Hls.Events.ERROR, (event, data) => {
+        console.error('Erreur HLS:', data);
+        if (data.fatal) {
+          this.error = `Erreur fatale HLS: ${data.details}`;
+          this.hls?.destroy();
+          this.hls = null;
+          if (data.details === 'manifestLoadError' && data.response?.code === 500) {
+            setTimeout(() => this.initializePlayer(url), 2000);
+          }
+        } else {
+          console.warn('Erreur non fatale ignorée:', data.details);
         }
-      }
-    }, () => {
-      console.log('Player initialized successfully');
-    });
+      });
 
-    this.player.on('error', () => {
-      console.error('Erreur de lecture:', this.player.error());
-      this.error = 'Erreur : ' + (this.player.error()?.message || 'Inconnue');
-    });
-
-    this.player.on('loadedmetadata', () => {
-      console.log('Métadonnées:', this.player.videoWidth(), this.player.videoHeight());
-    });
+      // Enregistrer le player dans le service
+      this.videoPlayerService.setPlayer(this.hls, videoElement);
+    } else if (videoElement.canPlayType('application/vnd.apple.mpegurl')) {
+      videoElement.src = url;
+      videoElement.play().catch(err => {
+        console.error('Erreur de lecture native:', err);
+        this.error = 'Erreur de lecture native.';
+      });
+      this.videoPlayerService.setPlayer(null, videoElement);
+    } else {
+      this.error = 'HLS non supporté par cet appareil.';
+    }
   }
-
   ngOnDestroy() {
-    if (this.player) {
-      this.player.dispose();
-      this.player = null;
+    if (this.hls) {
+      this.hls.destroy();
+      this.hls = null;
+    }
+    if (this.videoPlayer && this.videoPlayer.nativeElement) {
+      this.videoPlayer.nativeElement.pause();
+      this.videoPlayer.nativeElement.src = '';
     }
   }
 }

@@ -406,6 +406,66 @@ function hideAllRightPanels() {
     document.getElementById("channel-selection").style.display = "none";
 }
 
+
+
+function showLiveSession() {
+    hideAllRightPanels();
+    document.getElementById("live-session").style.display = "block";
+    const sessionSelect = document.getElementById("session-select");
+    sessionSelect.innerHTML = '<option value="">Choisir une session</option>';
+
+    fetch("http://localhost:5001/api/tnt/live-session/list", {
+        method: "GET",
+        headers: { "Authorization": "Bearer " + localStorage.getItem("token") }
+    })
+    .then(response => response.json())
+    .then(data => {
+        data.forEach(session => {
+            if (session.hls_url) {  // Ne montrer que les sessions avec HLS
+                const option = document.createElement("option");
+                option.value = session.id;
+                option.textContent = session.title;
+                sessionSelect.appendChild(option);
+            }
+        });
+    })
+    .catch(error => {
+        console.error("Erreur chargement sessions:", error);
+        alert("Erreur chargement sessions : " + error);
+    });
+}
+
+function hideLiveSession() {
+    document.getElementById("live-session").style.display = "none";
+    document.getElementById("welcome-message").style.display = "block";
+}
+
+function playLiveSession() {
+    const sessionId = document.getElementById("session-select").value;
+    if (!sessionId) {
+        alert("Veuillez sélectionner une session.");
+        return;
+    }
+
+    fetch(`http://localhost:5001/api/tnt/live-session/${sessionId}/url`, {
+        method: "GET",
+        headers: { "Authorization": "Bearer " + localStorage.getItem("token") }
+    })
+    .then(response => {
+        if (!response.ok) throw new Error("Aucune diffusion disponible");
+        return response.json();
+    })
+    .then(data => {
+        console.log("HLS URL récupérée:", data.hls_url);
+        updateVideoSource(data.hls_url);
+        hideLiveSession();
+    })
+    .catch(error => {
+        console.error("Erreur récupération URL:", error);
+        alert("Erreur : " + error.message);
+    });
+}
+
 function initNavigation() {
     const focusable = Array.from(document.querySelectorAll("button, input, textarea, select, #channel-list li"));
     let currentIndex = 0;

@@ -10,3 +10,4 @@ twilio
 rasa
 gunicorn
 flask-socketio
+redis
