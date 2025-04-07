@@ -32,8 +32,7 @@
               }
             ],
             "styles": [
-              "src/global.scss", "src/theme/variables.scss",
-              "node_modules/video.js/dist/video-js.css"
+              "src/global.scss", "src/theme/variables.scss"
             ],
             "scripts": []
           },

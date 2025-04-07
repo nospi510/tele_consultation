@@ -8,6 +8,7 @@ import { HttpClientModule } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 import { SocketIoModule, SocketIoConfig } from 'ngx-socket-io';
 import { JwtModule } from '@auth0/angular-jwt';
+import { VideoPlayerService } from './services/video-player.service';
 
 const config: SocketIoConfig = { url: 'http://localhost:5001', options: {} };
 
@@ -32,7 +33,7 @@ export function tokenGetter() {
       }
     })
   ],
-  providers: [{ provide: RouteReuseStrategy, useClass: IonicRouteStrategy }],
+  providers: [{ provide: RouteReuseStrategy, useClass: IonicRouteStrategy },VideoPlayerService],
   bootstrap: [AppComponent],
 })
 export class AppModule {}
