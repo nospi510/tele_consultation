@@ -27,8 +27,9 @@
                     <button id="tips-btn" onclick="showTips()">Conseils santé</button>
                     <button id="appointment-btn" onclick="showAppointment()">Planifier un RDV</button>
                     <button id="upcoming-btn" onclick="showUpcomingAppointments()">Mes RDV à venir</button>
+                    <button id="live-btn" onclick="showLiveSession()">Dr Santé Live</button>
                     <!-- Nouveau bouton pour la liste des chaînes -->
-                    <button id="channels-btn" onclick="showChannels()">Liste des chaînes</button>
+                    <button id="channels-btn" onclick="showChannels()">TV</button>
                     <button id="logout-btn" onclick="logout()">Se déconnecter</button>
                 </div>
             </div>
@@ -100,6 +101,15 @@
                 <h2>Mes RDV à venir</h2>
                 <div id="appointments-content"></div>
                 <button onclick="hideUpcomingAppointments()" tabindex="0">Retour</button>
+            </div>
+
+            <div id="live-session" class="fade-in" style="display:none;">
+                <h2>Session en Direct</h2>
+                <select id="session-select" tabindex="0">
+                    <option value="">Choisir une session</option>
+                </select>
+                <button onclick="playLiveSession()" tabindex="0">Regarder</button>
+                <button onclick="hideLiveSession()" tabindex="0">Retour</button>
             </div>
 
             <!-- Nouvelle section pour la liste des chaînes -->
