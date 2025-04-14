@@ -101,4 +101,12 @@ export class LiveListPage implements OnInit {
   goToSession(sessionId: number) {
     this.router.navigate(['/live-session', sessionId]);
   }
+
+  goBack() {
+    if (this.isDoctor) {
+      this.router.navigate(['/doctor-dashboard']);
+    } else {
+      this.router.navigate(['/home']);
+    }
+  }
 }
