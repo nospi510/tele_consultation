@@ -53,10 +53,19 @@
           <ion-item class="input-item glass-effect">
             <ion-icon name="document-text-outline" slot="start" class="input-icon"></ion-icon>
             <ion-label position="floating">Écrire un diagnostic</ion-label>
-            <ion-textarea [(ngModel)]="newMessage" rows="3" placeholder="Tapez votre diagnostic..." (ionInput)="onTyping($event)" auto-grow></ion-textarea>
+            <ion-textarea [(ngModel)]="diagnosisInput" rows="3" placeholder="Tapez votre diagnostic..." auto-grow></ion-textarea>
+          </ion-item>
+          <ion-button expand="block" class="action-button send-button" (click)="sendDiagnosis()" [disabled]="!diagnosisInput">
+            Envoyer Diagnostic
+            <ion-icon name="send-outline" slot="end"></ion-icon>
+          </ion-button>
+          <ion-item class="input-item glass-effect">
+            <ion-icon name="chatbubble-outline" slot="start" class="input-icon"></ion-icon>
+            <ion-label position="floating">Nouveau Message</ion-label>
+            <ion-textarea [(ngModel)]="newMessage" rows="3" placeholder="Tapez votre message..." (ionInput)="onTyping($event)" auto-grow></ion-textarea>
           </ion-item>
           <ion-button expand="block" class="action-button send-button" (click)="continueConsultation()" [disabled]="!newMessage">
-            Envoyer Diagnostic
+            Envoyer Message
             <ion-icon name="send-outline" slot="end"></ion-icon>
           </ion-button>
           <ion-button expand="block" class="action-button end-button" (click)="endCall()">
@@ -93,6 +102,15 @@
               <ion-select-option *ngFor="let status of statusOptions" [value]="status">{{ status }}</ion-select-option>
             </ion-select>
           </ion-item>
+          <ion-item class="input-item glass-effect">
+            <ion-icon name="document-text-outline" slot="start" class="input-icon"></ion-icon>
+            <ion-label position="floating">Écrire un diagnostic</ion-label>
+            <ion-textarea [(ngModel)]="diagnosisInput" rows="3" placeholder="Tapez votre diagnostic..." auto-grow></ion-textarea>
+          </ion-item>
+          <ion-button expand="block" class="action-button send-button" (click)="sendDiagnosis()" [disabled]="!diagnosisInput">
+            Envoyer Diagnostic
+            <ion-icon name="send-outline" slot="end"></ion-icon>
+          </ion-button>
           <ion-item class="input-item glass-effect">
             <ion-icon name="chatbubble-outline" slot="start" class="input-icon"></ion-icon>
             <ion-label position="floating">Nouveau Message</ion-label>

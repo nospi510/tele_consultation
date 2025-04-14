@@ -4,11 +4,10 @@ import { environment } from '../../../environments/environment';
 import { IonicModule } from '@ionic/angular';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { io } from 'socket.io-client';
 import Peer from 'peerjs';
 import { AuthService } from '../../services/auth.service';
-
 
 @Component({
   selector: 'app-live-session',
@@ -38,7 +37,8 @@ export class LiveSessionPage implements OnInit, OnDestroy {
   constructor(
     private http: HttpClient,
     private route: ActivatedRoute,
-    private authService: AuthService
+    private authService: AuthService,
+    private router: Router
   ) {
     this.sessionId = +this.route.snapshot.paramMap.get('id')!;
     this.socket = io(`${environment.apiUrl}/live`, {
@@ -51,9 +51,8 @@ export class LiveSessionPage implements OnInit, OnDestroy {
     this.peer = new Peer(userId, {
       host: 'localhost',
       port: 9001,
-      
       path: '/',
-      debug: 3 // Logs 
+      debug: 3
     });
   }
 
@@ -77,8 +76,8 @@ export class LiveSessionPage implements OnInit, OnDestroy {
   loadSessionDetails() {
     const token = this.authService.getToken();
     this.http.get(`${environment.apiUrl}/tnt/live-session/list`, {
-      headers: new HttpHeaders({ Authorization: `Bearer ${token}` }) }
-    ).subscribe({
+      headers: new HttpHeaders({ Authorization: `Bearer ${token}` })
+    }).subscribe({
       next: (sessions: any) => {
         const session = sessions.find((s: any) => s.id === this.sessionId);
         if (session) {
@@ -97,7 +96,6 @@ export class LiveSessionPage implements OnInit, OnDestroy {
       console.log('Diffusion démarrée par:', data.user_id);
     });
   }
-
 
   joinSession() {
     const userId = this.authService.getUserId();
@@ -130,7 +128,6 @@ export class LiveSessionPage implements OnInit, OnDestroy {
       console.log('Début diffusion:', userId);
       this.socket.emit('start_broadcast', { session_id: this.sessionId, user_id: userId });
   
-      // Corriger l’URL HLS avec le sous-dossier "live"
       const hlsUrl = `http://localhost:8080/hls/live/${this.sessionId}_${userId}.m3u8`;
   
       this.rtcPeerConnection = new RTCPeerConnection({
@@ -178,7 +175,6 @@ export class LiveSessionPage implements OnInit, OnDestroy {
       console.log('Réponse SRS:', data);
       await this.rtcPeerConnection.setRemoteDescription(new RTCSessionDescription({ type: 'answer', sdp: data.sdp }));
   
-      // Attendre un peu pour que le flux soit établi
       await new Promise(resolve => setTimeout(resolve, 5000));
   
       const token = this.authService.getToken();
@@ -244,6 +240,14 @@ export class LiveSessionPage implements OnInit, OnDestroy {
         comment: this.newComment
       });
       this.newComment = '';
+    }
+  }
+
+  goBack() {
+    if (this.isDoctor) {
+      this.router.navigate(['/doctor-dashboard']);
+    } else {
+      this.router.navigate(['/home']);
     }
   }
 

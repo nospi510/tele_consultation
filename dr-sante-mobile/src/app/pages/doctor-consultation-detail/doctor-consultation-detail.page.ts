@@ -21,6 +21,7 @@ export class DoctorConsultationDetailPage implements OnInit, OnDestroy {
   consultation: any = {};
   newMessage: string = '';
   reminderMessage: string = '';
+  diagnosisInput: string = ''; // Nouvelle propriété pour le diagnostic
   statusOptions = ['pending', 'en cours', 'terminée', 'annulée'];
   selectedStatus: string = '';
   messages: { sender: string; text: string; timestamp: Date }[] = [];
@@ -191,6 +192,27 @@ export class DoctorConsultationDetailPage implements OnInit, OnDestroy {
     );
   }
 
+  sendDiagnosis() {
+    if (!this.diagnosisInput || !this.consultation.id) return;
+
+    const token = this.authService.getToken();
+    const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`);
+    const diagnosisToSend = this.diagnosisInput;
+
+    this.diagnosisInput = '';
+
+    this.http.post(`${environment.apiUrl}/consultation/doctor/diagnosis/${this.consultation.id}`, { diagnosis: diagnosisToSend }, { headers }).subscribe(
+      () => {
+        this.consultation.diagnosis = diagnosisToSend; // Met à jour l'affichage local
+        this.showToast('Diagnostic envoyé', 'success');
+      },
+      (error) => {
+        console.error('Erreur envoi diagnostic:', error);
+        this.showToast('Erreur envoi diagnostic', 'danger');
+      }
+    );
+  }
+
   async proposeCall() {
     const id = this.route.snapshot.paramMap.get('id');
     if (id && !this.inCall) {
@@ -208,7 +230,6 @@ export class DoctorConsultationDetailPage implements OnInit, OnDestroy {
       const userId = this.authService.getUserId();
       if (!userId) throw new Error('User ID non disponible');
 
-      // Initialiser PeerJS
       this.peer = new Peer(`doctor-${userId}-${this.consultation.id}`, {
         host: 'localhost',
         port: 9001,
@@ -226,11 +247,9 @@ export class DoctorConsultationDetailPage implements OnInit, OnDestroy {
         this.endCall();
       });
 
-      // Capturer le flux local
       this.localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
       this.localVideo.nativeElement.srcObject = this.localStream;
 
-      // Configurer RTCPeerConnection
       this.peerConnection = new RTCPeerConnection({
         iceServers: [
           { urls: 'stun:stun.l.google.com:19302' },

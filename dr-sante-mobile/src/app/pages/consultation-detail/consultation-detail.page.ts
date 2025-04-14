@@ -82,7 +82,10 @@ export class ConsultationDetailPage implements OnInit, OnDestroy {
     this.socket.on('consultation_update', (data: any) => {
       this.consultation.conversation_history = data.conversation_history || this.consultation.conversation_history;
       this.consultation.status = data.status || this.consultation.status;
-      this.consultation.diagnosis = data.diagnosis || this.consultation.diagnosis;
+      if (data.diagnosis && data.diagnosis !== this.consultation.diagnosis) {
+        this.consultation.diagnosis = data.diagnosis;
+        this.showToast('Nouveau diagnostic reçu', 'success');
+      }
       this.checkMessageSync(data.conversation_history);
       this.updateMessages(this.consultation.conversation_history);
     });
@@ -170,7 +173,6 @@ export class ConsultationDetailPage implements OnInit, OnDestroy {
       const userId = this.authService.getUserId();
       if (!userId) throw new Error('User ID non disponible');
 
-      // Initialiser PeerJS
       this.peer = new Peer(`patient-${userId}-${this.consultation.id}`, {
         host: 'localhost',
         port: 9001,
@@ -188,11 +190,9 @@ export class ConsultationDetailPage implements OnInit, OnDestroy {
         this.endCall();
       });
 
-      // Capturer le flux local
       this.localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
       this.localVideo.nativeElement.srcObject = this.localStream;
 
-      // Configurer RTCPeerConnection
       this.peerConnection = new RTCPeerConnection({
         iceServers: [
           { urls: 'stun:stun.l.google.com:19302' },
