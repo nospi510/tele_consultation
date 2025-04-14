@@ -53,7 +53,7 @@ export class LiveSessionPage implements OnInit, OnDestroy {
       port: 9001,
       
       path: '/',
-      debug: 3 // Logs détaillés pour PeerJS
+      debug: 3 // Logs 
     });
   }
 
