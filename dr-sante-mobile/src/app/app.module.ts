@@ -9,6 +9,7 @@ import { FormsModule } from '@angular/forms';
 import { SocketIoModule, SocketIoConfig } from 'ngx-socket-io';
 import { JwtModule } from '@auth0/angular-jwt';
 import { VideoPlayerService } from './services/video-player.service';
+import { SocketService } from './services/socket.service';
 
 const config: SocketIoConfig = { url: 'http://localhost:5001', options: {} };
 
@@ -25,15 +26,16 @@ export function tokenGetter() {
     HttpClientModule,
     FormsModule,
     SocketIoModule.forRoot(config),
+    SocketIoModule,
     JwtModule.forRoot({
       config: {
         tokenGetter: tokenGetter,
-        allowedDomains: ['localhost:5001'], // Ajuste selon ton domaine
+        allowedDomains: ['localhost:5001'], 
         disallowedRoutes: []
       }
     })
   ],
-  providers: [{ provide: RouteReuseStrategy, useClass: IonicRouteStrategy },VideoPlayerService],
+  providers: [{ provide: RouteReuseStrategy, useClass: IonicRouteStrategy },VideoPlayerService,SocketService],
   bootstrap: [AppComponent],
 })
 export class AppModule {}
