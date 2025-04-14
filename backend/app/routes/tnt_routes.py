@@ -239,7 +239,7 @@ def join_as_broadcaster():
     return jsonify({"message": "Ajouté comme diffuseur"}), 200
 
 
-# Liste des sessions live
+# Liste des sessions live avec redis
 @tnt_bp.route("/live-session/list", methods=["GET"])
 @jwt_required()
 @swag_from({

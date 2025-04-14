@@ -75,6 +75,7 @@ def handle_webrtc_ice_candidate(data):
     print(f"ICE candidate reçu pour {consultation_id}: {data['candidate']}")  # Log
     emit('webrtc_ice_candidate', data, room=str(consultation_id), include_self=False)
 
+
 @consultation_bp.route("/", methods=["POST"])
 @jwt_required()
 @swag_from({
@@ -1507,5 +1508,4 @@ def update_appointment_status(appointment_id):
         "appointment_id": appointment.id,
         "new_status": new_status
     }), 200
-
 
