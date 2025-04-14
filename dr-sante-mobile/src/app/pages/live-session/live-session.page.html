@@ -1,7 +1,7 @@
 <ion-header translucent>
   <ion-toolbar class="header-gradient">
     <ion-buttons slot="start">
-      <ion-back-button defaultHref="/live-list" class="back-btn"></ion-back-button>
+      <ion-back-button [defaultHref]="isDoctor ? '/doctor-dashboard' : '/home'" class="back-btn"></ion-back-button>
     </ion-buttons>
     <ion-title class="header-title">{{ sessionTitle }}</ion-title>
     <ion-buttons slot="end" *ngIf="isDoctor && !isBroadcaster">

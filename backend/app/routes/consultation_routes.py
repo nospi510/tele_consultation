@@ -1509,3 +1509,70 @@ def update_appointment_status(appointment_id):
         "new_status": new_status
     }), 200
 
+
+@consultation_bp.route("/doctor/diagnosis/<int:consultation_id>", methods=["POST"])
+@jwt_required()
+@swag_from({
+    'tags': ['Consultations'],
+    'summary': 'Ajouter un diagnostic (Médecin)',
+    'description': 'Permet à un médecin authentifié d’ajouter ou de mettre à jour le diagnostic d’une consultation.',
+    'security': [{'BearerAuth': []}],
+    'parameters': [
+        {
+            'name': 'consultation_id',
+            'in': 'path',
+            'required': True,
+            'type': 'integer',
+            'description': 'ID de la consultation'
+        },
+        {
+            'name': 'body',
+            'in': 'body',
+            'required': True,
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'diagnosis': {'type': 'string', 'example': 'Grippe saisonnière'}
+                }
+            }
+        }
+    ],
+    'responses': {
+        '200': {
+            'description': 'Diagnostic ajouté avec succès',
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'message': {'type': 'string'},
+                    'diagnosis': {'type': 'string'}
+                }
+            }
+        },
+        '401': {'description': 'Non autorisé (JWT manquant ou invalide)'},
+        '404': {'description': 'Consultation non trouvée ou ne vous appartient pas'},
+        '400': {'description': 'Diagnostic manquant'}
+    }
+})
+def add_diagnosis(consultation_id):
+    user_id = get_jwt_identity()
+    consultation = Consultation.query.filter_by(id=consultation_id, doctor_id=user_id).first()
+
+    if not consultation:
+        return jsonify({"error": "Consultation non trouvée ou ne vous appartient pas."}), 404
+
+    data = request.get_json()
+    diagnosis = data.get("diagnosis")
+
+    if not diagnosis:
+        return jsonify({"error": "Le diagnostic est obligatoire."}), 400
+
+    consultation.diagnosis = diagnosis
+    db.session.commit()
+
+    send_consultation_update(consultation_id, consultation)
+
+    return jsonify({
+        "message": "Diagnostic ajouté avec succès",
+        "diagnosis": consultation.diagnosis
+    }), 200
+
