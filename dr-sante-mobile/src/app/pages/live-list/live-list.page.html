@@ -1,7 +1,7 @@
 <ion-header translucent>
   <ion-toolbar class="header-gradient">
     <ion-buttons slot="start">
-      <ion-back-button defaultHref="/home" class="back-btn"></ion-back-button>
+      <ion-back-button [defaultHref]="isDoctor ? '/doctor-dashboard' : '/home'" class="back-btn"></ion-back-button>
     </ion-buttons>
     <ion-title class="header-title">Sessions Live</ion-title>
     <ion-buttons slot="end" *ngIf="isDoctor">
@@ -15,41 +15,56 @@
 <ion-content class="ion-padding live-background">
   <div class="live-container">
     <ion-list class="session-list">
-      <ion-item
-        *ngFor="let session of sessions"
-        (click)="goToSession(session.id)"
-        class="session-item"
-      >
-        <ion-icon name="videocam-outline" slot="start" class="session-icon"></ion-icon>
-        <ion-label>
-          <h2>{{ session.title }}</h2>
-          <p>Hôte : {{ session.host }} | Diffuseurs : {{ session.broadcasters.join(', ') }}</p>
-        </ion-label>
-      </ion-item>
-      <ion-item *ngIf="loading" class="loading-item">
-        <ion-spinner name="dots" slot="start"></ion-spinner>
-        <ion-label>Chargement...</ion-label>
-      </ion-item>
-      <ion-item *ngIf="error" class="error-item">
-        <ion-icon name="warning-outline" slot="start" class="error-icon"></ion-icon>
-        <ion-label>{{ error }}</ion-label>
-      </ion-item>
+      <ion-card *ngFor="let session of sessions" class="session-card glass-effect" (click)="goToSession(session.id)">
+        <div class="card-overlay"></div>
+        <ion-card-header class="card-header">
+          <ion-card-title class="title-gradient">
+            <ion-icon name="videocam-outline" class="session-icon"></ion-icon>
+            {{ session.title }}
+          </ion-card-title>
+        </ion-card-header>
+        <ion-card-content class="session-content">
+          <ion-item lines="none" class="detail-item">
+            <ion-icon name="person-outline" slot="start" class="detail-icon"></ion-icon>
+            <ion-label>Hôte : {{ session.host }}</ion-label>
+          </ion-item>
+          <ion-item lines="none" class="detail-item">
+            <ion-icon name="people-outline" slot="start" class="detail-icon"></ion-icon>
+            <ion-label>Diffuseurs : {{ session.broadcasters.join(', ') || 'Aucun' }}</ion-label>
+          </ion-item>
+          <ion-item lines="none" class="detail-item" *ngIf="session.hls_urls.length">
+            <ion-icon name="play-circle-outline" slot="start" class="detail-icon live-icon"></ion-icon>
+            <ion-label>En direct</ion-label>
+          </ion-item>
+        </ion-card-content>
+      </ion-card>
+      <ion-card *ngIf="loading" class="loading-card glass-effect">
+        <ion-card-content>
+          <ion-spinner name="dots" class="loading-spinner"></ion-spinner>
+          <ion-label>Chargement...</ion-label>
+        </ion-card-content>
+      </ion-card>
+      <ion-card *ngIf="error" class="error-card glass-effect">
+        <ion-card-content>
+          <ion-icon name="warning-outline" class="error-icon"></ion-icon>
+          <ion-label>{{ error }}</ion-label>
+        </ion-card-content>
+      </ion-card>
     </ion-list>
   </div>
 
-  <!-- Modal pour créer une session -->
   <ion-modal #createModal [isOpen]="showCreateModal" (didDismiss)="showCreateModal = false">
     <ng-template>
       <ion-header>
         <ion-toolbar class="header-gradient">
           <ion-title>Créer une session live</ion-title>
           <ion-buttons slot="end">
-            <ion-button (click)="closeCreateModal()">Fermer</ion-button>
+            <ion-button class="close-btn" (click)="closeCreateModal()">Fermer</ion-button>
           </ion-buttons>
         </ion-toolbar>
       </ion-header>
-      <ion-content class="ion-padding">
-        <ion-item>
+      <ion-content class="ion-padding modal-content">
+        <ion-item class="input-item glass-effect">
           <ion-label position="stacked">Titre</ion-label>
           <ion-input [(ngModel)]="newSessionTitle" placeholder="Entrez le titre"></ion-input>
         </ion-item>

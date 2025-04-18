@@ -16,11 +16,13 @@
   <div class="live-container">
     <div class="video-section">
       <div class="video-container">
-        <video #localVideo class="live-video" autoplay muted *ngIf="isBroadcasting"></video>
-        <div class="remote-videos">
-          <video *ngFor="let stream of remoteStreams | keyvalue" class="live-video" autoplay></video>
+        <!-- Flux local pour les diffuseurs -->
+        <video #localVideo class="live-video glass-effect" autoplay muted *ngIf="isBroadcasting"></video>
+        <!-- Flux HLS pour les spectateurs -->
+        <div class="hls-videos">
+          <video *ngFor="let hls of hlsStreams" class="live-video glass-effect" autoplay controls [src]="hls.hls_url" #hlsVideo></video>
         </div>
-        <ion-text class="broadcasters">Diffuseurs : {{ broadcasters.join(', ') }}</ion-text>
+        <ion-text class="broadcasters">Diffuseurs : {{ broadcasters.join(', ') || 'Aucun' }}</ion-text>
       </div>
       <ion-button *ngIf="isDoctor && !isBroadcasting" class="start-btn" (click)="startBroadcast()">
         Démarrer la diffusion
@@ -28,23 +30,28 @@
     </div>
 
     <div class="chat-section">
-      <ion-card class="chat-card">
+      <ion-card class="chat-card glass-effect">
         <ion-card-header class="chat-header">
           <ion-card-title>Chat en direct</ion-card-title>
         </ion-card-header>
         <ion-card-content class="chat-content">
           <ion-list class="comment-list">
-            <ion-item *ngFor="let comment of comments" class="comment-item">
+            <ion-item *ngFor="let comment of comments" class="comment-item glass-effect">
               <ion-label>
                 <h3>{{ comment.user }}</h3>
                 <p>{{ comment.comment }}</p>
                 <span class="timestamp">{{ comment.timestamp | date:'short' }}</span>
               </ion-label>
             </ion-item>
+            <ion-item *ngIf="isTyping" class="typing-indicator glass-effect">
+              <ion-icon name="ellipsis-horizontal" slot="start" class="typing-icon"></ion-icon>
+              <ion-label>Quelqu’un écrit...</ion-label>
+            </ion-item>
           </ion-list>
-          <ion-item class="comment-input">
-            <ion-input [(ngModel)]="newComment" placeholder="Écrire un commentaire..."></ion-input>
-            <ion-button slot="end" (click)="sendComment()">Envoyer</ion-button>
+          <ion-item class="comment-input glass-effect">
+            <ion-icon name="chatbubble-outline" slot="start" class="input-icon"></ion-icon>
+            <ion-textarea [(ngModel)]="newComment" placeholder="Écrire un commentaire..." (ionInput)="onTyping($event)" rows="2" auto-grow></ion-textarea>
+            <ion-button slot="end" class="send-btn" (click)="sendComment()" [disabled]="!newComment.trim()">Envoyer</ion-button>
           </ion-item>
         </ion-card-content>
       </ion-card>
