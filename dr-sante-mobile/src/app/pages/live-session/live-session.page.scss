@@ -1,21 +1,52 @@
 $primary-gradient: linear-gradient(135deg, #4f46e5, #7c3aed);
 $secondary-gradient: linear-gradient(135deg, #10b981, #34d399);
-$card-bg: rgba(255, 255, 255, 0.95);
+$card-bg: rgba(255, 255, 255, 0.9);
 $shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
-$channel-violet: #4c1180;
+$hover-scale: scale(1.05);
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+  100% { transform: scale(1); }
+}
 
 .header-gradient {
   --background: #{$primary-gradient};
   --color: white;
   padding: 10px 15px;
-  .header-title {
+  ion-title {
     font-weight: 700;
     font-size: 1.5rem;
     text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
   }
   .back-btn {
     --color: white;
-    font-size: 1.8rem;
+    --background: transparent;
+    --border-radius: 50%;
+    ion-icon {
+      font-size: 1.8rem;
+      transition: transform 0.3s ease;
+    }
+    &:hover {
+      ion-icon {
+        transform: translateX(-5px);
+      }
+    }
+  }
+  .join-btn {
+    --background: #{$secondary-gradient};
+    --color: white;
+    --border-radius: 15px;
+    font-weight: 600;
+    &:hover {
+      --background: linear-gradient(135deg, #059669, #10b981);
+      transform: $hover-scale;
+    }
   }
 }
 
@@ -28,110 +59,207 @@ $channel-violet: #4c1180;
   max-width: 1200px;
   margin: 0 auto;
   display: flex;
+  flex-direction: column;
   gap: 20px;
 }
 
 .video-section {
-  flex: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   .video-container {
-    position: relative;
     width: 100%;
-    height: 450px;
-    background: #1f2937;
-    border-radius: 10px;
-    box-shadow: $shadow;
-    overflow: hidden;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
+    max-width: 800px;
+    position: relative;
     .live-video {
       width: 100%;
-      height: 100%;
-      object-fit: cover;
-      border-radius: 5px;
+      border-radius: 15px;
+      box-shadow: $shadow;
+      background: #000;
+      &.local-video {
+        position: absolute;
+        bottom: 20px;
+        right: 20px;
+        width: 200px;
+        height: auto;
+        border: 2px solid #10b981;
+      }
     }
     .remote-videos {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      width: 100%;
-      height: 100%;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 15px;
+      margin-top: 15px;
+      video {
+        width: 100%;
+        border-radius: 15px;
+        box-shadow: $shadow;
+      }
     }
     .broadcasters {
-      position: absolute;
-      bottom: 10px;
-      left: 10px;
-      background: rgba(0, 0, 0, 0.7);
-      color: white;
-      padding: 5px 10px;
-      border-radius: 5px;
-      font-weight: 600;
-      z-index: 11;
+      display: block;
+      margin-top: 10px;
+      font-size: 0.95rem;
+      color: #1f2937;
+      text-align: center;
     }
   }
   .start-btn {
     --background: #{$secondary-gradient};
-    --color: white;
-    margin-top: 10px;
+    --border-radius: 15px;
+    --padding-top: 12px;
+    --padding-bottom: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-top: 20px;
+    transition: all 0.3s ease;
+    &:hover {
+      --background: linear-gradient(135deg, #059669, #10b981);
+      transform: $hover-scale;
+    }
   }
 }
 
 .chat-section {
-  flex: 1;
   .chat-card {
+    border-radius: 25px;
     background: $card-bg;
-    border-radius: 15px;
     box-shadow: $shadow;
+    animation: fadeInUp 0.6s ease-out;
+    position: relative;
+    overflow: hidden;
+    .card-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+      z-index: 0;
+    }
     .chat-header {
       background: $primary-gradient;
-      color: white;
-      text-align: center;
-      border-radius: 15px 15px 0 0;
+      padding: 15px;
+      border-radius: 25px 25px 0 0;
+      position: relative;
+      z-index: 1;
+      ion-card-title {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: white;
+        text-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+      }
     }
     .chat-content {
       padding: 15px;
+      position: relative;
+      z-index: 1;
       .comment-list {
-        max-height: 300px;
+        max-height: 400px;
         overflow-y: auto;
+        background: rgba(255, 255, 255, 0.8);
+        border-radius: 15px;
+        padding: 10px;
+        margin-bottom: 15px;
+        backdrop-filter: blur(5px);
         .comment-item {
           --background: transparent;
           margin-bottom: 10px;
-          h3 {
-            font-size: 1rem;
-            color: $channel-violet;
+          padding: 10px;
+          border-radius: 12px;
+          transition: all 0.3s ease;
+          &.new-comment {
+            animation: fadeInUp 0.3s ease-out;
           }
-          p {
-            font-size: 0.9rem;
+          &:hover {
+            transform: $hover-scale;
           }
-          .timestamp {
-            font-size: 0.8rem;
-            color: #666;
+          ion-label {
+            h3 {
+              color: #4f46e5;
+              font-weight: 600;
+              margin-bottom: 5px;
+            }
+            p {
+              color: #1f2937;
+              margin: 5px 0;
+            }
+            .timestamp {
+              font-size: 0.8rem;
+              color: #4b5563;
+            }
           }
         }
       }
       .comment-input {
-        --background: #f3f4f6;
-        --border-radius: 10px;
-        margin-top: 10px;
+        --background: rgba(243, 244, 246, 0.8);
+        border-radius: 15px;
+        padding: 10px;
+        transition: all 0.3s ease;
+        backdrop-filter: blur(5px);
+        &:hover {
+          --background: rgba(229, 231, 235, 0.8);
+          box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+        ion-input {
+          --padding-start: 10px;
+          font-size: 1rem;
+          color: #1f2937;
+        }
+        ion-button {
+          --background: #{$secondary-gradient};
+          --border-radius: 12px;
+          --padding-top: 8px;
+          --padding-bottom: 8px;
+          font-weight: 600;
+          &:hover {
+            --background: linear-gradient(135deg, #059669, #10b981);
+            transform: $hover-scale;
+          }
+        }
       }
     }
   }
 }
 
-.join-btn {
-  --background: #{$secondary-gradient};
-  --color: white;
-}
-
-@media (max-width: 768px) {
-  .live-container {
-    flex-direction: column;
+@media (max-width: 600px) {
+  .video-section {
+    .video-container {
+      .live-video.local-video {
+        width: 150px;
+      }
+      .remote-videos {
+        grid-template-columns: 1fr;
+      }
+    }
   }
-  .video-section .video-container {
-    height: 300px;
-    .live-video {
-      width: 100%;
-      height: 50%;
+  .chat-section {
+    .chat-card {
+      .chat-header {
+        ion-card-title {
+          font-size: 1.2rem;
+        }
+      }
+      .chat-content {
+        .comment-list {
+          max-height: 300px;
+          .comment-item {
+            ion-label {
+              h3 {
+                font-size: 0.95rem;
+              }
+              p {
+                font-size: 0.9rem;
+              }
+              .timestamp {
+                font-size: 0.75rem;
+              }
+            }
+          }
+        }
+      }
     }
   }
 }

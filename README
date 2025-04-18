@@ -48,12 +48,6 @@ ionic capacitor add ios
 # Vérifier le démarrage :
 ionic serve
 
-
-#Modifie polyfills.ts dans src/ pour inclure ce polyfill :
-
-#// src/polyfills.ts
-import 'zone.js'; // Inclus par défaut dans Angular
-
-(window as any).global = window;
+npm install hls.js@1.4.10
 
 
