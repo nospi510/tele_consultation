@@ -43,6 +43,7 @@ $hover-scale: scale(1.05);
     --color: white;
     --border-radius: 15px;
     font-weight: 600;
+    transition: all 0.3s ease;
     &:hover {
       --background: linear-gradient(135deg, #059669, #10b981);
       transform: $hover-scale;
@@ -64,43 +65,30 @@ $hover-scale: scale(1.05);
 }
 
 .video-section {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
   .video-container {
-    width: 100%;
-    max-width: 800px;
-    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
     .live-video {
       width: 100%;
+      max-width: 800px;
       border-radius: 15px;
+      background: rgba(0, 0, 0, 0.1);
       box-shadow: $shadow;
-      background: #000;
-      &.local-video {
-        position: absolute;
-        bottom: 20px;
-        right: 20px;
-        width: 200px;
-        height: auto;
-        border: 2px solid #10b981;
+      &.glass-effect {
+        background: rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(10px);
       }
     }
-    .remote-videos {
+    .hls-videos {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
       gap: 15px;
-      margin-top: 15px;
-      video {
-        width: 100%;
-        border-radius: 15px;
-        box-shadow: $shadow;
-      }
     }
     .broadcasters {
-      display: block;
-      margin-top: 10px;
-      font-size: 0.95rem;
+      font-size: 1rem;
       color: #1f2937;
+      margin-top: 10px;
       text-align: center;
     }
   }
@@ -112,7 +100,7 @@ $hover-scale: scale(1.05);
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 1px;
-    margin-top: 20px;
+    margin-top: 15px;
     transition: all 0.3s ease;
     &:hover {
       --background: linear-gradient(135deg, #059669, #10b981);
@@ -129,22 +117,10 @@ $hover-scale: scale(1.05);
     animation: fadeInUp 0.6s ease-out;
     position: relative;
     overflow: hidden;
-    .card-overlay {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(255, 255, 255, 0.1);
-      backdrop-filter: blur(10px);
-      z-index: 0;
-    }
     .chat-header {
       background: $primary-gradient;
       padding: 15px;
       border-radius: 25px 25px 0 0;
-      position: relative;
-      z-index: 1;
       ion-card-title {
         font-size: 1.5rem;
         font-weight: 700;
@@ -154,42 +130,51 @@ $hover-scale: scale(1.05);
     }
     .chat-content {
       padding: 15px;
-      position: relative;
-      z-index: 1;
       .comment-list {
-        max-height: 400px;
+        max-height: 300px;
         overflow-y: auto;
-        background: rgba(255, 255, 255, 0.8);
-        border-radius: 15px;
-        padding: 10px;
-        margin-bottom: 15px;
-        backdrop-filter: blur(5px);
         .comment-item {
-          --background: transparent;
-          margin-bottom: 10px;
-          padding: 10px;
+          --background: rgba(243, 244, 246, 0.8);
           border-radius: 12px;
+          padding: 10px;
+          margin-bottom: 10px;
           transition: all 0.3s ease;
-          &.new-comment {
-            animation: fadeInUp 0.3s ease-out;
+          &.glass-effect {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(5px);
           }
           &:hover {
             transform: $hover-scale;
           }
           ion-label {
             h3 {
-              color: #4f46e5;
+              font-size: 1.1rem;
               font-weight: 600;
-              margin-bottom: 5px;
+              color: #4f46e5;
             }
             p {
+              font-size: 0.95rem;
               color: #1f2937;
               margin: 5px 0;
             }
             .timestamp {
               font-size: 0.8rem;
-              color: #4b5563;
+              color: #6b7280;
             }
+          }
+        }
+        .typing-indicator {
+          --background: rgba(229, 231, 235, 0.8);
+          border-radius: 12px;
+          padding: 10px;
+          .typing-icon {
+            font-size: 1.5rem;
+            color: #4f46e5;
+            animation: pulse 1.5s infinite;
+          }
+          ion-label {
+            font-style: italic;
+            color: #4b5563;
           }
         }
       }
@@ -197,26 +182,37 @@ $hover-scale: scale(1.05);
         --background: rgba(243, 244, 246, 0.8);
         border-radius: 15px;
         padding: 10px;
+        margin-top: 15px;
         transition: all 0.3s ease;
-        backdrop-filter: blur(5px);
+        &.glass-effect {
+          background: rgba(255, 255, 255, 0.1);
+          backdrop-filter: blur(5px);
+        }
         &:hover {
           --background: rgba(229, 231, 235, 0.8);
-          box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
         }
-        ion-input {
+        .input-icon {
+          font-size: 1.5rem;
+          color: #4f46e5;
+          margin-right: 10px;
+        }
+        ion-textarea {
           --padding-start: 10px;
-          font-size: 1rem;
+          font-size: 0.95rem;
           color: #1f2937;
         }
-        ion-button {
+        .send-btn {
           --background: #{$secondary-gradient};
           --border-radius: 12px;
-          --padding-top: 8px;
-          --padding-bottom: 8px;
           font-weight: 600;
+          transition: all 0.3s ease;
           &:hover {
             --background: linear-gradient(135deg, #059669, #10b981);
             transform: $hover-scale;
+          }
+          &:disabled {
+            --background: #d1d5db;
+            --opacity: 0.7;
           }
         }
       }
@@ -227,10 +223,10 @@ $hover-scale: scale(1.05);
 @media (max-width: 600px) {
   .video-section {
     .video-container {
-      .live-video.local-video {
-        width: 150px;
+      .live-video {
+        max-width: 100%;
       }
-      .remote-videos {
+      .hls-videos {
         grid-template-columns: 1fr;
       }
     }
@@ -244,17 +240,13 @@ $hover-scale: scale(1.05);
       }
       .chat-content {
         .comment-list {
-          max-height: 300px;
           .comment-item {
             ion-label {
               h3 {
-                font-size: 0.95rem;
+                font-size: 1rem;
               }
               p {
                 font-size: 0.9rem;
-              }
-              .timestamp {
-                font-size: 0.75rem;
               }
             }
           }

@@ -119,6 +119,10 @@ $hover-scale: scale(1.05);
           color: #10b981;
           margin-right: 10px;
         }
+        .live-icon {
+          color: #ef4444;
+          animation: pulse 1.5s infinite;
+        }
         ion-label {
           font-size: 0.95rem;
           color: #1f2937;

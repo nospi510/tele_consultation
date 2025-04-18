@@ -11,3 +11,4 @@ rasa
 gunicorn
 flask-socketio
 redis
+uuid

@@ -13,6 +13,7 @@ from flask_socketio import emit, join_room, leave_room
 import logging
 from urllib.parse import urljoin
 import redis
+import uuid
 
 # Configuration des logs
 logging.basicConfig(level=logging.INFO)
@@ -193,8 +194,6 @@ def create_live_session():
     socketio.emit('new_session', {'id': new_session.id, 'title': new_session.title, 'host': user.fullname}, namespace='/live')
     return jsonify({"message": "Session créée", "session_id": new_session.id}), 201
 
-
-# Rejoindre une session comme broadcaster
 @tnt_bp.route("/live-session/join-as-broadcaster", methods=["POST"])
 @jwt_required()
 @swag_from({
@@ -235,11 +234,9 @@ def join_as_broadcaster():
     db.session.commit()
 
     logger.info(f"{user.email} a rejoint {session.title} comme diffuseur")
-    socketio.emit('broadcaster_joined', {'session_id': session.id, 'user': user.fullname}, room=str(session.id), namespace='/live')
+    socketio.emit('broadcaster_joined', {'session_id': session.id, 'user_id': user_id, 'user': user.fullname}, room=str(session.id), namespace='/live')
     return jsonify({"message": "Ajouté comme diffuseur"}), 200
 
-
-# Liste des sessions live avec redis
 @tnt_bp.route("/live-session/list", methods=["GET"])
 @jwt_required()
 @swag_from({
@@ -257,7 +254,8 @@ def join_as_broadcaster():
                         'id': {'type': 'integer'},
                         'title': {'type': 'string'},
                         'host': {'type': 'string'},
-                        'broadcasters': {'type': 'array', 'items': {'type': 'string'}}
+                        'broadcasters': {'type': 'array', 'items': {'type': 'string'}},
+                        'hls_urls': {'type': 'array', 'items': {'type': 'string'}}
                     }
                 }
             }
@@ -268,21 +266,22 @@ def list_live_sessions():
     sessions = LiveSession.query.filter_by(is_active=True).all()
     result = []
     for s in sessions:
-        data = redis_client.hgetall(f"live_session:{s.id}")
-        hls_url = data.get(b"hls_url", b"").decode() if data else ""
+        # Récupérer toutes les URLs HLS pour cette session
+        hls_urls = []
+        for broadcaster in s.broadcasters:
+            data = redis_client.hgetall(f"live_session:{s.id}:{broadcaster.id}")
+            if data and b"hls_url" in data:
+                hls_urls.append(data[b"hls_url"].decode())
         result.append({
             'id': s.id,
             'title': s.title,
             'host': s.host.fullname,
             'broadcasters': [b.fullname for b in s.broadcasters],
-            'hls_url': hls_url
+            'hls_urls': hls_urls
         })
     logger.info("Liste des sessions live demandée")
     return jsonify(result), 200
 
-
-
-# Nouvelle route pour stocker l’URL HLS dans Redis
 @tnt_bp.route("/live-session/broadcast-url", methods=["POST"])
 @jwt_required()
 @swag_from({
@@ -313,17 +312,15 @@ def store_broadcast_url():
     hls_url = data.get("hls_url")
     if not session_id or not hls_url:
         return jsonify({"error": "Session ID ou URL HLS manquant"}), 400
-    redis_client.hset(f"live_session:{session_id}", mapping={"user_id": user_id, "hls_url": hls_url})
-    logger.info(f"URL HLS stockée pour session {session_id}: {hls_url}")
+    redis_client.hset(f"live_session:{session_id}:{user_id}", mapping={"user_id": user_id, "hls_url": hls_url})
+    logger.info(f"URL HLS stockée pour session {session_id}, user {user_id}: {hls_url}")
     return jsonify({"message": "URL HLS stockée", "session_id": session_id}), 200
 
-
-# Nouvelle route pour récupérer l’URL HLS
 @tnt_bp.route("/live-session/<int:session_id>/url", methods=["GET"])
 @jwt_required()
 @swag_from({
     'tags': ['TNT'],
-    'summary': 'Récupérer l’URL HLS d’une session live',
+    'summary': 'Récupérer les URLs HLS d’une session live',
     'security': [{'BearerAuth': []}],
     'parameters': [{
         'name': 'session_id',
@@ -332,15 +329,37 @@ def store_broadcast_url():
         'type': 'integer'
     }],
     'responses': {
-        '200': {'description': 'URL HLS récupérée', 'schema': {'type': 'object', 'properties': {'user_id': {'type': 'string'}, 'hls_url': {'type': 'string'}}}},
+        '200': {
+            'description': 'URLs HLS récupérées',
+            'schema': {
+                'type': 'array',
+                'items': {
+                    'type': 'object',
+                    'properties': {
+                        'user_id': {'type': 'string'},
+                        'hls_url': {'type': 'string'}
+                    }
+                }
+            }
+        },
         '404': {'description': 'Session non trouvée'}
     }
 })
 def get_broadcast_url(session_id):
-    data = redis_client.hgetall(f"live_session:{session_id}")
-    if not data:
+    session = LiveSession.query.get(session_id)
+    if not session:
+        return jsonify({"error": "Session non trouvée"}), 404
+    hls_urls = []
+    for broadcaster in session.broadcasters:
+        data = redis_client.hgetall(f"live_session:{session_id}:{broadcaster.id}")
+        if data and b"hls_url" in data:
+            hls_urls.append({
+                "user_id": data[b"user_id"].decode(),
+                "hls_url": data[b"hls_url"].decode()
+            })
+    if not hls_urls:
         return jsonify({"error": "Aucune diffusion en cours"}), 404
-    return jsonify({"user_id": data[b"user_id"].decode(), "hls_url": data[b"hls_url"].decode()}), 200
+    return jsonify(hls_urls), 200
 
 @tnt_bp.route("/live-session/start-broadcast", methods=["POST"])
 @jwt_required()
@@ -372,12 +391,10 @@ def start_broadcast():
         return jsonify({"error": "Session ID manquant"}), 400
 
     hls_url = f"http://localhost:8080/hls/live/{session_id}_{user_id}.m3u8"
-    redis_client.hset(f"live_session:{session_id}", mapping={"user_id": user_id, "hls_url": hls_url})
-    socketio.emit('broadcast_started', {'user_id': user_id}, room=str(session_id), namespace='/live')
+    redis_client.hset(f"live_session:{session_id}:{user_id}", mapping={"user_id": user_id, "hls_url": hls_url})
+    socketio.emit('broadcast_started', {'user_id': user_id, 'hls_url': hls_url}, room=str(session_id), namespace='/live')
     logger.info(f"Diffusion WebRTC démarrée pour session {session_id} par {user_id}")
     return jsonify({"message": "Diffusion démarrée", "hls_url": hls_url}), 200
-
-
 
 # Gestion WebSocket
 @socketio.on('connect', namespace='/live')
@@ -410,12 +427,19 @@ def on_send_comment(data):
     user_id = data['user_id']
     comment = data['comment']
     user = User.query.get(user_id)
+    comment_id = str(uuid.uuid4())  # ID unique pour éviter les doublons
     logger.info(f"Commentaire dans {session_id} par {user.email}: {comment}")
-    emit('new_comment', {'user': user.fullname, 'comment': comment, 'timestamp': datetime.utcnow().isoformat()}, room=str(session_id))
+    emit('new_comment', {
+        'id': comment_id,
+        'user': user.fullname,
+        'comment': comment,
+        'timestamp': datetime.utcnow().isoformat()
+    }, room=str(session_id))
 
 @socketio.on('start_broadcast', namespace='/live')
 def on_start_broadcast(data):
     session_id = data['session_id']
     user_id = data['user_id']
+    hls_url = data.get('hls_url')
     logger.info(f"Diffusion démarrée dans {session_id} par {user_id}")
-    emit('broadcast_started', {'user_id': user_id}, room=str(session_id))
+    emit('broadcast_started', {'user_id': user_id, 'hls_url': hls_url}, room=str(session_id))
