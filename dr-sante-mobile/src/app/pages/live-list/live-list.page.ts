@@ -17,7 +17,7 @@ import { AuthService } from '../../services/auth.service';
 })
 export class LiveListPage implements OnInit {
   @ViewChild('createModal') createModal!: IonModal;
-  sessions: { id: number; title: string; host: string; broadcasters: string[] }[] = [];
+  sessions: { id: number; title: string; host: string; broadcasters: string[]; hls_urls: string[] }[] = [];
   loading: boolean = true;
   error: string | null = null;
   isDoctor: boolean = false;
@@ -44,7 +44,7 @@ export class LiveListPage implements OnInit {
     this.socket.on('disconnect', () => console.log('WebSocket déconnecté'));
     this.socket.on('new_session', (data: any) => {
       console.log('Nouvelle session reçue:', data);
-      this.sessions.push({ id: data.id, title: data.title, host: data.host, broadcasters: [data.host] });
+      this.sessions.push({ id: data.id, title: data.title, host: data.host, broadcasters: [data.host], hls_urls: [] });
     });
     this.loadSessions();
   }
