@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewChild, ElementRef, OnDestroy } from '@angular/core';
+import { Component, OnInit, ViewChild, ElementRef, OnDestroy, AfterViewInit } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 import { IonicModule } from '@ionic/angular';
@@ -8,6 +8,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { io } from 'socket.io-client';
 import Peer from 'peerjs';
 import { AuthService } from '../../services/auth.service';
+import Hls from 'hls.js';
 
 @Component({
   selector: 'app-live-session',
@@ -16,23 +17,26 @@ import { AuthService } from '../../services/auth.service';
   standalone: true,
   imports: [IonicModule, CommonModule, FormsModule]
 })
-export class LiveSessionPage implements OnInit, OnDestroy {
+export class LiveSessionPage implements OnInit, OnDestroy, AfterViewInit {
   @ViewChild('localVideo', { static: false }) localVideo!: ElementRef<HTMLVideoElement>;
+  @ViewChild('hlsVideo', { static: false }) hlsVideo!: ElementRef<HTMLVideoElement>;
   sessionId: number;
   sessionTitle: string = '';
   broadcasters: string[] = [];
-  remoteStreams: MediaStream[] = [];
-  comments: { user: string; comment: string; timestamp: string }[] = [];
+  hlsStreams: { user_id: string; hls_url: string }[] = [];
+  comments: { id: string; user: string; comment: string; timestamp: string }[] = [];
   newComment: string = '';
   isDoctor: boolean = false;
   isBroadcaster: boolean = false;
   isBroadcasting: boolean = false;
+  isTyping: boolean = false;
   private socket: any;
   private peer: Peer;
   private localStream: MediaStream | null = null;
   private peers: { [key: string]: any } = {};
-  private peerStreamMap: { [peerId: string]: MediaStream } = {};
+  private hlsPlayers: Hls[] = [];
   private rtcPeerConnection: RTCPeerConnection | null = null;
+
 
   constructor(
     private http: HttpClient,
@@ -59,6 +63,7 @@ export class LiveSessionPage implements OnInit, OnDestroy {
   ngOnInit() {
     this.isDoctor = this.authService.isDoctor();
     this.loadSessionDetails();
+    this.loadHlsStreams();
     this.setupSocketListeners();
     this.joinSession();
 
@@ -73,6 +78,10 @@ export class LiveSessionPage implements OnInit, OnDestroy {
     });
   }
 
+  ngAfterViewInit() {
+    this.loadHlsPlayers();
+  }
+
   loadSessionDetails() {
     const token = this.authService.getToken();
     this.http.get(`${environment.apiUrl}/tnt/live-session/list`, {
@@ -83,10 +92,46 @@ export class LiveSessionPage implements OnInit, OnDestroy {
         if (session) {
           this.sessionTitle = session.title;
           this.broadcasters = session.broadcasters;
+          this.hlsStreams = session.hls_urls.map((url: string, index: number) => ({
+            user_id: session.broadcasters[index] || 'unknown',
+            hls_url: url
+          }));
           this.isBroadcaster = this.broadcasters.includes(this.authService.getUserId()!);
+          this.loadHlsPlayers();
         }
       },
       error: (err) => console.error('Erreur chargement session:', err)
+    });
+  }
+
+  loadHlsStreams() {
+    const token = this.authService.getToken();
+    this.http.get(`${environment.apiUrl}/tnt/live-session/${this.sessionId}/url`, {
+      headers: new HttpHeaders({ Authorization: `Bearer ${token}` })
+    }).subscribe({
+      next: (data: any) => {
+        this.hlsStreams = data;
+        this.loadHlsPlayers();
+      },
+      error: (err) => console.error('Erreur chargement URLs HLS:', err)
+    });
+  }
+
+  loadHlsPlayers() {
+    this.hlsStreams.forEach((stream, index) => {
+      const videoElement = document.querySelectorAll('video.live-video')[index] as HTMLVideoElement;
+      if (videoElement && Hls.isSupported()) {
+        const hls = new Hls();
+        hls.loadSource(stream.hls_url);
+        hls.attachMedia(videoElement);
+        hls.on(Hls.Events.MANIFEST_PARSED, () => {
+          videoElement.play().catch(err => console.error('Erreur lecture HLS:', err));
+        });
+        this.hlsPlayers.push(hls);
+      } else if (videoElement) {
+        videoElement.src = stream.hls_url;
+        videoElement.play().catch(err => console.error('Erreur lecture directe:', err));
+      }
     });
   }
 
@@ -94,6 +139,21 @@ export class LiveSessionPage implements OnInit, OnDestroy {
     this.socket.on('connect', () => console.log('WebSocket connecté'));
     this.socket.on('broadcast_started', (data: any) => {
       console.log('Diffusion démarrée par:', data.user_id);
+      this.hlsStreams.push({ user_id: data.user_id, hls_url: data.hls_url });
+      this.loadHlsPlayers();
+    });
+    this.socket.on('broadcaster_joined', (data: any) => {
+      console.log('Nouveau diffuseur:', data.user);
+      this.broadcasters.push(data.user);
+      this.loadHlsStreams();
+    });
+    this.socket.on('new_comment', (data: any) => {
+      if (!this.comments.some(c => c.id === data.id)) {
+        this.comments.push(data);
+      }
+    });
+    this.socket.on('typing', (data: any) => {
+      this.isTyping = data.is_typing;
     });
   }
 
@@ -126,8 +186,6 @@ export class LiveSessionPage implements OnInit, OnDestroy {
   
       const userId = this.authService.getUserId();
       console.log('Début diffusion:', userId);
-      this.socket.emit('start_broadcast', { session_id: this.sessionId, user_id: userId });
-  
       const hlsUrl = `http://localhost:8080/hls/live/${this.sessionId}_${userId}.m3u8`;
   
       this.rtcPeerConnection = new RTCPeerConnection({
@@ -183,7 +241,10 @@ export class LiveSessionPage implements OnInit, OnDestroy {
         { session_id: this.sessionId, hls_url: hlsUrl },
         { headers: new HttpHeaders({ Authorization: `Bearer ${token}` }) }
       ).subscribe({
-        next: () => console.log('URL HLS stockée:', hlsUrl),
+        next: () => {
+          console.log('URL HLS stockée:', hlsUrl);
+          this.socket.emit('start_broadcast', { session_id: this.sessionId, user_id: userId, hls_url: hlsUrl });
+        },
         error: (err) => console.error('Erreur stockage URL HLS:', err)
       });
   
@@ -200,35 +261,19 @@ export class LiveSessionPage implements OnInit, OnDestroy {
     }
   }
 
-  connectToBroadcaster(broadcasterId: string) {
-    if (broadcasterId === this.authService.getUserId()) return;
-    console.log('Connexion au broadcaster:', broadcasterId);
-    const call = this.peer.call(broadcasterId, new MediaStream());
-    call.on('stream', (remoteStream: MediaStream) => {
-      console.log('Flux reçu de:', broadcasterId);
-      this.addRemoteStream(broadcasterId, remoteStream);
-    });
-    call.on('error', (err: any) => console.error('Erreur appel:', err));
-    this.peers[broadcasterId] = call;
-  }
-
   handleIncomingCall(call: any) {
     console.log('Appel entrant de:', call.peer);
     call.answer(this.localStream || new MediaStream());
     call.on('stream', (remoteStream: MediaStream) => {
       console.log('Flux entrant reçu de:', call.peer);
-      this.addRemoteStream(call.peer, remoteStream);
     });
     call.on('error', (err: any) => console.error('Erreur appel entrant:', err));
     this.peers[call.peer] = call;
   }
 
-  addRemoteStream(peerId: string, stream: MediaStream) {
-    if (!this.peerStreamMap[peerId]) {
-      this.peerStreamMap[peerId] = stream;
-      this.remoteStreams = Object.values(this.peerStreamMap);
-      console.log('Flux ajouté, total:', this.remoteStreams.length);
-    }
+  onTyping(event: any) {
+    const userId = this.authService.getUserId();
+    this.socket.emit('typing', { session_id: this.sessionId, user_id: userId, is_typing: !!this.newComment });
   }
 
   sendComment() {
@@ -240,6 +285,7 @@ export class LiveSessionPage implements OnInit, OnDestroy {
         comment: this.newComment
       });
       this.newComment = '';
+      this.socket.emit('typing', { session_id: this.sessionId, user_id: userId, is_typing: false });
     }
   }
 
@@ -261,6 +307,7 @@ export class LiveSessionPage implements OnInit, OnDestroy {
       this.rtcPeerConnection.close();
     }
     Object.values(this.peers).forEach(call => call.close());
+    this.hlsPlayers.forEach(hls => hls.destroy());
     this.peer.destroy();
     this.socket.disconnect();
   }
