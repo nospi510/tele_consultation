@@ -418,20 +418,24 @@ function showLiveSession() {
         method: "GET",
         headers: { "Authorization": "Bearer " + localStorage.getItem("token") }
     })
-    .then(response => response.json())
+    .then(response => {
+        if (!response.ok) throw new Error("Erreur lors du chargement des sessions");
+        return response.json();
+    })
     .then(data => {
         data.forEach(session => {
-            if (session.hls_url) {  // Ne montrer que les sessions avec HLS
+            // Vérifier si la session a au moins une URL HLS
+            if (session.hls_urls && session.hls_urls.length > 0) {
                 const option = document.createElement("option");
                 option.value = session.id;
-                option.textContent = session.title;
+                option.textContent = `${session.title} (${session.broadcasters.join(', ') || 'En direct'})`;
                 sessionSelect.appendChild(option);
             }
         });
     })
     .catch(error => {
         console.error("Erreur chargement sessions:", error);
-        alert("Erreur chargement sessions : " + error);
+        alert("Erreur chargement sessions : " + error.message);
     });
 }
 
@@ -456,8 +460,13 @@ function playLiveSession() {
         return response.json();
     })
     .then(data => {
-        console.log("HLS URL récupérée:", data.hls_url);
-        updateVideoSource(data.hls_url);
+        if (!Array.isArray(data) || data.length === 0) {
+            throw new Error("Aucun flux disponible pour cette session");
+        }
+        // Sélectionner le premier flux HLS disponible
+        const hlsUrl = data[0].hls_url;
+        console.log("HLS URL sélectionnée:", hlsUrl);
+        updateVideoSource(hlsUrl);
         hideLiveSession();
     })
     .catch(error => {
