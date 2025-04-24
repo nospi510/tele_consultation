@@ -3,10 +3,18 @@
 <head>
     <meta http-equiv="Content-Type" content="application/vnd.hbbtv.xhtml+xml; charset=utf-8" />
     <title>Dr Santé - Téléconsultation</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <!-- Custom CSS -->
     <link rel="stylesheet" href="assets/styles.css" />
-    <script type="text/javascript" src="scripts/main.js"></script>
-    <!-- Inclure hls.js pour lire les flux M3U -->
+    <!-- hls.js pour les flux M3U -->
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <!-- Bootstrap JS (pour les composants interactifs comme modals) -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+    <!-- Custom JS -->
+    <script type="text/javascript" src="scripts/main.js"></script>
 </head>
 <body onload="initApp();">
     <!-- Gestionnaire HbbTV -->
@@ -15,113 +23,183 @@
     </div>
 
     <!-- Conteneur principal -->
-    <div id="app-container">
-        <!-- Colonne gauche : Menu et Infos utilisateur -->
-        <div id="left-panel">
-            <div id="main-menu">
-                <h1>Dr Santé</h1>
-                <button id="login-btn" onclick="showLogin()">Se connecter</button>
-                <div id="nav-buttons" style="display:none;">
-                    <button id="consult-btn" onclick="showConsultation()">Nouvelle consultation</button>
-                    <button id="history-btn" onclick="showHistory()">Mes consultations</button>
-                    <button id="tips-btn" onclick="showTips()">Conseils santé</button>
-                    <button id="appointment-btn" onclick="showAppointment()">Planifier un RDV</button>
-                    <button id="upcoming-btn" onclick="showUpcomingAppointments()">Mes RDV à venir</button>
-                    <button id="live-btn" onclick="showLiveSession()">Dr Santé Live</button>
-                    <button id="channels-btn" onclick="showChannels()">TV</button>
-                    <button id="logout-btn" onclick="logout()">Se déconnecter</button>
+    <div class="container-fluid" id="app-container">
+        <div class="row g-3">
+            <!-- Colonne gauche : Menu et Infos utilisateur -->
+            <div class="col-md-3 col-12">
+                <div id="left-panel">
+                    <div id="main-menu" class="card shadow-sm glass-effect">
+                        <div class="card-body">
+                            <h1 class="card-title"><i class="bi bi-heart-pulse me-2"></i>Dr Santé</h1>
+                            <button id="login-btn" class="btn btn-primary w-100 mb-2" onclick="showLogin()">
+                                <i class="bi bi-box-arrow-in-right me-2"></i>Se connecter
+                            </button>
+                            <div id="nav-buttons" style="display:none;">
+                                <button id="consult-btn" class="btn btn-outline-primary w-100 mb-2" onclick="showConsultation()">
+                                    <i class="bi bi-clipboard-check me-2"></i>Nouvelle consultation
+                                </button>
+                                <button id="history-btn" class="btn btn-outline-primary w-100 mb-2" onclick="showHistory()">
+                                    <i class="bi bi-journal-text me-2"></i>Mes consultations
+                                </button>
+                                <button id="tips-btn" class="btn btn-outline-primary w-100 mb-2" onclick="showTips()">
+                                    <i class="bi bi-lightbulb me-2"></i>Conseils santé
+                                </button>
+                                <button id="appointment-btn" class="btn btn-outline-primary w-100 mb-2" onclick="showAppointment()">
+                                    <i class="bi bi-calendar-plus me-2"></i>Planifier un RDV
+                                </button>
+                                <button id="upcoming-btn" class="btn btn-outline-primary w-100 mb-2" onclick="showUpcomingAppointments()">
+                                    <i class="bi bi-calendar-check me-2"></i>Mes RDV à venir
+                                </button>
+                                <button id="live-btn" class="btn btn-outline-primary w-100 mb-2" onclick="showLiveSession()">
+                                    <i class="bi bi-camera-video me-2"></i>Dr Santé Live
+                                </button>
+                                <button id="channels-btn" class="btn btn-outline-primary w-100 mb-2" onclick="showChannels()">
+                                    <i class="bi bi-tv me-2"></i>TV
+                                </button>
+                                <button id="logout-btn" class="btn btn-outline-danger w-100 mb-2" onclick="logout()">
+                                    <i class="bi bi-box-arrow-right me-2"></i>Se déconnecter
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="user-info" class="card shadow-sm glass-effect mt-3" style="display:none;">
+                        <div class="card-body">
+                            <h2 class="card-title"><i class="bi bi-person-circle me-2"></i>Mon Profil</h2>
+                            <p><strong>Nom :</strong> <span id="user-fullname"></span></p>
+                            <p><strong>Email :</strong> <span id="user-email"></span></p>
+                            <p><strong>Rôle :</strong> <span id="user-role"></span></p>
+                        </div>
+                    </div>
                 </div>
             </div>
-            <div id="user-info" style="display:none;">
-                <h2>Mon Profil</h2>
-                <p><strong>Nom :</strong> <span id="user-fullname"></span></p>
-                <p><strong>Email :</strong> <span id="user-email"></span></p>
-                <p><strong>Rôle :</strong> <span id="user-role"></span></p>
-            </div>
-        </div>
 
-        <!-- Colonne centrale : Vidéo -->
-        <div id="video-panel">
-            <h2>Dr Santé Live</h2>
-            <!-- Remplacement de l’iframe par un élément vidéo -->
-            <video id="video-player" controls>
-                Votre navigateur ne supporte pas ce format vidéo.
-            </video>
-        </div>
-
-        <!-- Colonne droite : Contenu dynamique -->
-        <div id="right-panel">
-            <!-- Formulaire de connexion -->
-            <div id="login-form" class="fade-in" style="display:none;">
-                <h2>Connexion</h2>
-                <label for="email-input">Email :</label>
-                <input type="email" id="email-input" placeholder="Email" tabindex="0" />
-                <label for="password-input">Mot de passe :</label>
-                <input type="password" id="password-input" placeholder="Mot de passe" tabindex="0" />
-                <button onclick="submitLogin()" tabindex="0">Se connecter</button>
-                <button onclick="hideLogin()" tabindex="0">Retour</button>
+            <!-- Colonne centrale : Vidéo -->
+            <div class="col-md-6 col-12">
+                <div id="video-panel" class="card shadow-sm glass-effect">
+                    <div class="card-body">
+                        <h2 class="card-title"><i class="bi bi-camera-video-fill me-2"></i>Dr Santé Live</h2>
+                        <video id="video-player" class="w-100 rounded" controls>
+                            Votre navigateur ne supporte pas ce format vidéo.
+                        </video>
+                    </div>
+                </div>
             </div>
 
-            <!-- Formulaire de consultation -->
-            <div id="consultation-form" class="fade-in" style="display:none;">
-                <h2>Nouvelle Consultation</h2>
-                <textarea id="symptoms-input" placeholder="Décrivez vos symptômes..." tabindex="0"></textarea>
-                <button onclick="submitConsultation()" tabindex="0">Envoyer</button>
-                <button onclick="hideConsultation()" tabindex="0">Retour</button>
-            </div>
+            <!-- Colonne droite : Contenu dynamique -->
+            <div class="col-md-3 col-12">
+                <div id="right-panel" class="card shadow-sm glass-effect">
+                    <div class="card-body">
+                        <!-- Formulaire de connexion -->
+                        <div id="login-form" class="fade-in" style="display:none;">
+                            <h2 class="card-title"><i class="bi bi-lock me-2"></i>Connexion</h2>
+                            <div class="mb-3">
+                                <label for="email-input" class="form-label">Email :</label>
+                                <input type="email" id="email-input" class="form-control" placeholder="Email" tabindex="0">
+                            </div>
+                            <div class="mb-3">
+                                <label for="password-input" class="form-label">Mot de passe :</label>
+                                <input type="password" id="password-input" class="form-control" placeholder="Mot de passe" tabindex="0">
+                            </div>
+                            <button class="btn btn-success w-100 mb-2" onclick="submitLogin()" tabindex="0">
+                                <i class="bi bi-check-circle me-2"></i>Se connecter
+                            </button>
+                            <button class="btn btn-secondary w-100" onclick="hideLogin()" tabindex="0">
+                                <i class="bi bi-arrow-left me-2"></i>Retour
+                            </button>
+                        </div>
 
-            <!-- Historique des consultations -->
-            <div id="history-view" class="fade-in" style="display:none;">
-                <h2>Mes Consultations</h2>
-                <div id="history-content"></div>
-                <button onclick="hideHistory()" tabindex="0">Retour</button>
-            </div>
+                        <!-- Formulaire de consultation -->
+                        <div id="consultation-form" class="fade-in" style="display:none;">
+                            <h2 class="card-title"><i class="bi bi-clipboard-check me-2"></i>Nouvelle Consultation</h2>
+                            <div class="mb-3">
+                                <textarea id="symptoms-input" class="form-control" placeholder="Décrivez vos symptômes..." tabindex="0"></textarea>
+                            </div>
+                            <button class="btn btn-success w-100 mb-2" onclick="submitConsultation()" tabindex="0">
+                                <i class="bi bi-send me-2"></i>Envoyer
+                            </button>
+                            <button class="btn btn-secondary w-100" onclick="hideConsultation()" tabindex="0">
+                                <i class="bi bi-arrow-left me-2"></i>Retour
+                            </button>
+                        </div>
 
-            <!-- Conseils de santé -->
-            <div id="tips-view" class="fade-in" style="display:none;">
-                <h2>Conseils Santé</h2>
-                <p id="tips-content"></p>
-                <button onclick="hideTips()" tabindex="0">Retour</button>
-            </div>
+                        <!-- Historique des consultations -->
+                        <div id="history-view" class="fade-in" style="display:none;">
+                            <h2 class="card-title"><i class="bi bi-journal-text me-2"></i>Mes Consultations</h2>
+                            <div id="history-content" class="mb-3"></div>
+                            <button class="btn btn-secondary w-100" onclick="hideHistory()" tabindex="0">
+                                <i class="bi bi-arrow-left me-2"></i>Retour
+                            </button>
+                        </div>
 
-            <!-- Formulaire de planification de rendez-vous -->
-            <div id="appointment-form" class="fade-in" style="display:none;">
-                <h2>Planifier un Rendez-vous</h2>
-                <select id="doctor-select" tabindex="0">
-                    <option value="">Choisir un médecin</option>
-                </select>
-                <input type="datetime-local" id="appointment-date" tabindex="0" />
-                <button onclick="submitAppointment()" tabindex="0">Planifier</button>
-                <button onclick="hideAppointment()" tabindex="0">Retour</button>
-            </div>
+                        <!-- Conseils de santé -->
+                        <div id="tips-view" class="fade-in" style="display:none;">
+                            <h2 class="card-title"><i class="bi bi-lightbulb me-2"></i>Conseils Santé</h2>
+                            <p id="tips-content" class="mb-3"></p>
+                            <button class="btn btn-secondary w-100" onclick="hideTips()" tabindex="0">
+                                <i class="bi bi-arrow-left me-2"></i>Retour
+                            </button>
+                        </div>
 
-            <!-- Liste des rendez-vous à venir -->
-            <div id="upcoming-appointments" class="fade-in" style="display:none;">
-                <h2>Mes RDV à venir</h2>
-                <div id="appointments-content"></div>
-                <button onclick="hideUpcomingAppointments()" tabindex="0">Retour</button>
-            </div>
+                        <!-- Formulaire de planification de rendez-vous -->
+                        <div id="appointment-form" class="fade-in" style="display:none;">
+                            <h2 class="card-title"><i class="bi bi-calendar-plus me-2"></i>Planifier un Rendez-vous</h2>
+                            <div class="mb-3">
+                                <select id="doctor-select" class="form-select" tabindex="0">
+                                    <option value="">Choisir un médecin</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <input type="datetime-local" id="appointment-date" class="form-control" tabindex="0">
+                            </div>
+                            <button class="btn btn-success w-100 mb-2" onclick="submitAppointment()" tabindex="0">
+                                <i class="bi bi-calendar-check me-2"></i>Planifier
+                            </button>
+                            <button class="btn btn-secondary w-100" onclick="hideAppointment()" tabindex="0">
+                                <i class="bi bi-arrow-left me-2"></i>Retour
+                            </button>
+                        </div>
 
-            <div id="live-session" class="fade-in" style="display:none;">
-                <h2>Session en Direct</h2>
-                <select id="session-select" tabindex="0">
-                    <option value="">Choisir une session</option>
-                </select>
-                <button onclick="playLiveSession()" tabindex="0">Regarder</button>
-                <button onclick="hideLiveSession()" tabindex="0">Retour</button>
-            </div>
+                        <!-- Liste des rendez-vous à venir -->
+                        <div id="upcoming-appointments" class="fade-in" style="display:none;">
+                            <h2 class="card-title"><i class="bi bi-calendar-check me-2"></i>Mes RDV à venir</h2>
+                            <div id="appointments-content" class="mb-3"></div>
+                            <button class="btn btn-secondary w-100" onclick="hideUpcomingAppointments()" tabindex="0">
+                                <i class="bi bi-arrow-left me-2"></i>Retour
+                            </button>
+                        </div>
 
-            <!-- Nouvelle section pour la liste des chaînes -->
-            <div id="channel-selection" class="fade-in" style="display:none;">
-                <h2>Liste des Chaînes</h2>
-                <ul id="channel-list"></ul>
-                <button onclick="hideChannels()" tabindex="0">Retour</button>
-            </div>
+                        <!-- Sessions live -->
+                        <div id="live-session" class="fade-in" style="display:none;">
+                            <h2 class="card-title"><i class="bi bi-camera-video me-2"></i>Session en Direct</h2>
+                            <div class="mb-3">
+                                <select id="session-select" class="form-select" tabindex="0">
+                                    <option value="">Choisir une session</option>
+                                </select>
+                            </div>
+                            <button class="btn btn-success w-100 mb-2" onclick="playLiveSession()" tabindex="0">
+                                <i class="bi bi-play-circle me-2"></i>Regarder
+                            </button>
+                            <button class="btn btn-secondary w-100" onclick="hideLiveSession()" tabindex="0">
+                                <i class="bi bi-arrow-left me-2"></i>Retour
+                            </button>
+                        </div>
 
-            <!-- Message de bienvenue par défaut -->
-            <div id="welcome-message" class="fade-in">
-                <h2>Bienvenue sur Dr Santé</h2>
-                <p>Connectez-vous pour accéder à vos services de téléconsultation.</p>
+                        <!-- Liste des chaînes -->
+                        <div id="channel-selection" class="fade-in" style="display:none;">
+                            <h2 class="card-title"><i class="bi bi-tv me-2"></i>Liste des Chaînes</h2>
+                            <ul id="channel-list" class="list-group mb-3"></ul>
+                            <button class="btn btn-secondary w-100" onclick="hideChannels()" tabindex="0">
+                                <i class="bi bi-arrow-left me-2"></i>Retour
+                            </button>
+                        </div>
+
+                        <!-- Message de bienvenue -->
+                        <div id="welcome-message" class="fade-in text-center">
+                            <h2 class="card-title"><i class="bi bi-house-door me-2"></i>Bienvenue sur Dr Santé</h2>
+                            <p>Connectez-vous pour accéder à vos services de téléconsultation.</p>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
