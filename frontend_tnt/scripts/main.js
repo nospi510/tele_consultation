@@ -1,8 +1,8 @@
 let userData = null;
 
 // URL de la playlist M3U
-// const m3uUrl = 'https://iptv-org.github.io/iptv/countries/fr.m3u';
 const m3uUrl = 'https://raw.githubusercontent.com/Free-TV/IPTV/master/playlist.m3u8';
+
 
 
 function initApp() {
@@ -155,11 +155,13 @@ function showHistory() {
         container.innerHTML = "";
         data.forEach(c => {
             const card = document.createElement("div");
-            card.className = "consultation-card";
+            card.className = "consultation-card card shadow-sm glass-effect mb-2";
             card.innerHTML = `
-                <p><strong>ID :</strong> ${c.id}</p>
-                <p><strong>Symptômes :</strong> ${c.symptoms}</p>
-                <p><strong>Diagnostic :</strong> ${c.diagnosis || "En attente"}</p>
+                <div class="card-body">
+                    <p><strong>ID :</strong> ${c.id}</p>
+                    <p><strong>Symptômes :</strong> ${c.symptoms}</p>
+                    <p><strong>Diagnostic :</strong> ${c.diagnosis || "En attente"}</p>
+                </div>
             `;
             container.appendChild(card);
         });
@@ -288,17 +290,19 @@ function showUpcomingAppointments() {
         const container = document.getElementById("appointments-content");
         container.innerHTML = "";
         if (data.length === 0) {
-            container.innerHTML = "<p>Aucun rendez-vous à venir.</p>";
+            container.innerHTML = "<p class='text-muted'>Aucun rendez-vous à venir.</p>";
         } else {
             data.forEach(appointment => {
                 const card = document.createElement("div");
-                card.className = "appointment-card";
+                card.className = "appointment-card card shadow-sm glass-effect mb-2";
                 card.innerHTML = `
-                    <p><strong>ID :</strong> ${appointment.id}</p>
-                    <p><strong>Patient :</strong> ${appointment.patient_name}</p>
-                    <p><strong>Médecin :</strong> ${appointment.doctor_name}</p>
-                    <p><strong>Date :</strong> ${new Date(appointment.appointment_date).toLocaleString()}</p>
-                    <p><strong>Statut :</strong> ${appointment.status}</p>
+                    <div class="card-body">
+                        <p><strong>ID :</strong> ${appointment.id}</p>
+                        <p><strong>Patient :</strong> ${appointment.patient_name}</p>
+                        <p><strong>Médecin :</strong> ${appointment.doctor_name}</p>
+                        <p><strong>Date :</strong> ${new Date(appointment.appointment_date).toLocaleString()}</p>
+                        <p><strong>Statut :</strong> ${appointment.status}</p>
+                    </div>
                 `;
                 container.appendChild(card);
             });
@@ -314,19 +318,19 @@ function hideUpcomingAppointments() {
     document.getElementById("welcome-message").style.display = "block";
 }
 
-// Nouvelle fonctionnalité : Afficher la liste des chaînes
 async function showChannels() {
     hideAllRightPanels();
     document.getElementById("channel-selection").style.display = "block";
     const channelList = document.getElementById("channel-list");
-    channelList.innerHTML = ""; // Réinitialiser la liste
+    channelList.innerHTML = "";
 
     const channels = await fetchM3U();
     channels.forEach(channel => {
         const li = document.createElement("li");
-        li.textContent = channel.name;
+        li.className = "list-group-item list-group-item-action glass-effect";
+        li.innerHTML = `<i class="bi bi-tv me-2"></i>${channel.name}`;
         li.onclick = () => changeChannel(channel.url);
-        li.tabIndex = 0; // Rendre focusable pour la navigation
+        li.tabIndex = 0;
         channelList.appendChild(li);
     });
 }
@@ -336,7 +340,6 @@ function hideChannels() {
     document.getElementById("welcome-message").style.display = "block";
 }
 
-// Récupérer et parser le fichier M3U
 async function fetchM3U() {
     try {
         const response = await fetch(m3uUrl);
@@ -363,7 +366,6 @@ async function fetchM3U() {
     }
 }
 
-// Changer la chaîne dans le lecteur vidéo
 function changeChannel(url) {
     const video = document.getElementById("video-player");
     if (Hls.isSupported()) {
@@ -380,7 +382,6 @@ function changeChannel(url) {
     }
 }
 
-// Mettre à jour la source vidéo (pour les consultations)
 function updateVideoSource(url) {
     const video = document.getElementById("video-player");
     if (Hls.isSupported()) {
@@ -394,7 +395,6 @@ function updateVideoSource(url) {
     }
 }
 
-// Fonction utilitaire pour masquer tous les panneaux de droite
 function hideAllRightPanels() {
     document.getElementById("welcome-message").style.display = "none";
     document.getElementById("login-form").style.display = "none";
@@ -404,9 +404,8 @@ function hideAllRightPanels() {
     document.getElementById("appointment-form").style.display = "none";
     document.getElementById("upcoming-appointments").style.display = "none";
     document.getElementById("channel-selection").style.display = "none";
+    document.getElementById("live-session").style.display = "none";
 }
-
-
 
 function showLiveSession() {
     hideAllRightPanels();
@@ -424,7 +423,6 @@ function showLiveSession() {
     })
     .then(data => {
         data.forEach(session => {
-            // Vérifier si la session a au moins une URL HLS
             if (session.hls_urls && session.hls_urls.length > 0) {
                 const option = document.createElement("option");
                 option.value = session.id;
@@ -463,7 +461,6 @@ function playLiveSession() {
         if (!Array.isArray(data) || data.length === 0) {
             throw new Error("Aucun flux disponible pour cette session");
         }
-        // Sélectionner le premier flux HLS disponible
         const hlsUrl = data[0].hls_url;
         console.log("HLS URL sélectionnée:", hlsUrl);
         updateVideoSource(hlsUrl);
@@ -476,7 +473,7 @@ function playLiveSession() {
 }
 
 function initNavigation() {
-    const focusable = Array.from(document.querySelectorAll("button, input, textarea, select, #channel-list li"));
+    const focusable = Array.from(document.querySelectorAll("button, input, textarea, select, .list-group-item"));
     let currentIndex = 0;
 
     document.addEventListener("keydown", (event) => {
@@ -504,7 +501,11 @@ function initNavigation() {
                 focusable[currentIndex].focus();
                 break;
             case "Enter":
-                focusable[currentIndex].click();
+                if (focusable[currentIndex].classList.contains('list-group-item')) {
+                    focusable[currentIndex].click();
+                } else {
+                    focusable[currentIndex].click();
+                }
                 break;
         }
     });
