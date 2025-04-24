@@ -7,7 +7,7 @@ import requests
 import re
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from app import db, socketio
-from app.models.live_session import LiveSession, session_broadcasters, session_participants
+from app.models.live_session import LiveSession, session_broadcasters, session_participants, LiveQuestion, VideoQueue
 from app.models.user import User
 from flask_socketio import emit, join_room, leave_room
 import logging
@@ -24,7 +24,7 @@ redis_client = redis.Redis(host='localhost', port=6379, db=0)
 
 tnt_bp = Blueprint("tnt", __name__)
 
-# Routes existantes
+# Routes existantes (inchangées)
 @tnt_bp.route("/advice", methods=["GET"])
 @swag_from({
     'tags': ['TNT'],
@@ -61,10 +61,8 @@ def get_medical_advice():
 })
 def get_live_channels():
     try:
-        #m3u_url = "https://iptv-org.github.io/iptv/countries/fr.m3u"
         m3u_url = "https://raw.githubusercontent.com/Free-TV/IPTV/master/playlist.m3u8"
-
-        response = requests.get(m3u_url, timeout=15)  # Timeout augmenté
+        response = requests.get(m3u_url, timeout=15)
         response.raise_for_status()
 
         m3u_content = response.text.splitlines()
@@ -88,20 +86,17 @@ def get_live_channels():
         logger.error(f"Erreur inattendue : {str(e)}")
         return jsonify({"error": f"Erreur : {str(e)}"}), 500
 
-
 @tnt_bp.route("/live-channels/proxy/<path:url>", methods=["GET"])
 @swag_from({
     'tags': ['TNT'],
     'summary': 'Proxy pour diffuser un flux vidéo en direct',
-    'parameters': [
-        {
-            'name': 'url',
-            'in': 'path',
-            'required': True,
-            'type': 'string',
-            'description': 'URL du flux vidéo à diffuser'
-        }
-    ],
+    'parameters': [{
+        'name': 'url',
+        'in': 'path',
+        'required': True,
+        'type': 'string',
+        'description': 'URL du flux vidéo à diffuser'
+    }],
     'responses': {
         '200': {'description': 'Flux vidéo diffusé'},
         '500': {'description': 'Erreur lors de la diffusion du flux'}
@@ -109,15 +104,11 @@ def get_live_channels():
 })
 def proxy_channel(url):
     try:
-        # Augmenter le timeout pour les requêtes HEAD et GET
         head_response = requests.head(url, timeout=10)
         content_type = head_response.headers.get('Content-Type', 'application/x-mpegURL')
-
-        # Récupérer le contenu en streaming
         response = requests.get(url, stream=True, timeout=15)
         response.raise_for_status()
 
-        # Si c'est un fichier M3U8, ajuster les URLs relatives
         if content_type == 'application/x-mpegURL' or url.endswith('.m3u8'):
             m3u_content = response.text
             base_url = url.rsplit('/', 1)[0] + '/'
@@ -132,7 +123,6 @@ def proxy_channel(url):
             logger.info(f"Proxy M3U8 ajusté pour : {url}")
             return Response('\n'.join(adjusted_m3u), content_type=content_type)
 
-        # Pour les fragments .ts, diffuser en streaming
         def generate():
             for chunk in response.iter_content(chunk_size=8192):
                 yield chunk
@@ -145,9 +135,7 @@ def proxy_channel(url):
     except Exception as e:
         logger.error(f"Erreur inattendue dans le proxy pour {url} : {str(e)}")
         return jsonify({"error": f"Erreur : {str(e)}"}), 500
-    
 
-# Nouvelle route pour créer une session live
 @tnt_bp.route("/live-session/create", methods=["POST"])
 @jwt_required()
 @swag_from({
@@ -158,12 +146,7 @@ def proxy_channel(url):
         'name': 'body',
         'in': 'body',
         'required': True,
-        'schema': {
-            'type': 'object',
-            'properties': {
-                'title': {'type': 'string'}
-            }
-        }
+        'schema': {'type': 'object', 'properties': {'title': {'type': 'string'}}}
     }],
     'responses': {
         '201': {'description': 'Session live créée'},
@@ -204,12 +187,7 @@ def create_live_session():
         'name': 'body',
         'in': 'body',
         'required': True,
-        'schema': {
-            'type': 'object',
-            'properties': {
-                'session_id': {'type': 'integer'}
-            }
-        }
+        'schema': {'type': 'object', 'properties': {'session_id': {'type': 'integer'}}}
     }],
     'responses': {
         '200': {'description': 'Ajouté comme diffuseur'},
@@ -266,7 +244,6 @@ def list_live_sessions():
     sessions = LiveSession.query.filter_by(is_active=True).all()
     result = []
     for s in sessions:
-        # Récupérer toutes les URLs HLS pour cette session
         hls_urls = []
         for broadcaster in s.broadcasters:
             data = redis_client.hgetall(f"live_session:{s.id}:{broadcaster.id}")
@@ -292,13 +269,7 @@ def list_live_sessions():
         'name': 'body',
         'in': 'body',
         'required': True,
-        'schema': {
-            'type': 'object',
-            'properties': {
-                'session_id': {'type': 'integer'},
-                'hls_url': {'type': 'string'}
-            }
-        }
+        'schema': {'type': 'object', 'properties': {'session_id': {'type': 'integer'}, 'hls_url': {'type': 'string'}}}
     }],
     'responses': {
         '200': {'description': 'URL HLS stockée'},
@@ -371,12 +342,7 @@ def get_broadcast_url(session_id):
         'name': 'body',
         'in': 'body',
         'required': True,
-        'schema': {
-            'type': 'object',
-            'properties': {
-                'session_id': {'type': 'integer'}
-            }
-        }
+        'schema': {'type': 'object', 'properties': {'session_id': {'type': 'integer'}}}
     }],
     'responses': {
         '200': {'description': 'Diffusion démarrée'},
@@ -396,7 +362,474 @@ def start_broadcast():
     logger.info(f"Diffusion WebRTC démarrée pour session {session_id} par {user_id}")
     return jsonify({"message": "Diffusion démarrée", "hls_url": hls_url}), 200
 
-# Gestion WebSocket
+# Nouvelles routes pour les questions textuelles
+@tnt_bp.route("/live-session/<int:session_id>/questions/enable", methods=["POST"])
+@jwt_required()
+@swag_from({
+    'tags': ['TNT'],
+    'summary': 'Activer les questions pour une session live',
+    'security': [{'BearerAuth': []}],
+    'parameters': [{
+        'name': 'session_id',
+        'in': 'path',
+        'required': True,
+        'type': 'integer'
+    }],
+    'responses': {
+        '200': {'description': 'Questions activées'},
+        '403': {'description': 'Seuls les docteurs peuvent activer les questions'},
+        '404': {'description': 'Session non trouvée'}
+    }
+})
+def enable_questions(session_id):
+    user_id = get_jwt_identity()
+    user = User.query.get(user_id)
+    session = LiveSession.query.get(session_id)
+    
+    if not session:
+        return jsonify({"error": "Session non trouvée"}), 404
+    if user.role != "doctor" or user_id not in [b.id for b in session.broadcasters]:
+        logger.warning(f"Tentative non autorisée d'activer les questions par {user.email}")
+        return jsonify({"error": "Seuls les diffuseurs peuvent activer les questions"}), 403
+
+    redis_client.set(f"live_session:{session_id}:questions_enabled", "true")
+    socketio.emit('questions_enabled', {'session_id': session_id}, room=str(session_id), namespace='/live')
+    logger.info(f"Questions activées pour la session {session_id} par {user.email}")
+    return jsonify({"message": "Questions activées"}), 200
+
+@tnt_bp.route("/live-session/<int:session_id>/questions/disable", methods=["POST"])
+@jwt_required()
+@swag_from({
+    'tags': ['TNT'],
+    'summary': 'Désactiver les questions pour une session live',
+    'security': [{'BearerAuth': []}],
+    'parameters': [{
+        'name': 'session_id',
+        'in': 'path',
+        'required': True,
+        'type': 'integer'
+    }],
+    'responses': {
+        '200': {'description': 'Questions désactivées'},
+        '403': {'description': 'Seuls les docteurs peuvent désactiver les questions'},
+        '404': {'description': 'Session non trouvée'}
+    }
+})
+def disable_questions(session_id):
+    user_id = get_jwt_identity()
+    user = User.query.get(user_id)
+    session = LiveSession.query.get(session_id)
+    
+    if not session:
+        return jsonify({"error": "Session non trouvée"}), 404
+    if user.role != "doctor" or user_id not in [b.id for b in session.broadcasters]:
+        logger.warning(f"Tentative non autorisée de désactiver les questions par {user.email}")
+        return jsonify({"error": "Seuls les diffuseurs peuvent désactiver les questions"}), 403
+
+    redis_client.set(f"live_session:{session_id}:questions_enabled", "false")
+    socketio.emit('questions_disabled', {'session_id': session_id}, room=str(session_id), namespace='/live')
+    logger.info(f"Questions désactivées pour la session {session_id} par {user.email}")
+    return jsonify({"message": "Questions désactivées"}), 200
+
+@tnt_bp.route("/live-session/<int:session_id>/questions", methods=["POST"])
+@jwt_required()
+@swag_from({
+    'tags': ['TNT'],
+    'summary': 'Envoyer une question textuelle pour une session live',
+    'security': [{'BearerAuth': []}],
+    'parameters': [{
+        'name': 'session_id',
+        'in': 'path',
+        'required': True,
+        'type': 'integer'
+    }, {
+        'name': 'body',
+        'in': 'body',
+        'required': True,
+        'schema': {'type': 'object', 'properties': {'question_text': {'type': 'string'}}}
+    }],
+    'responses': {
+        '201': {'description': 'Question envoyée'},
+        '400': {'description': 'Texte de la question manquant ou questions désactivées'},
+        '404': {'description': 'Session non trouvée'}
+    }
+})
+def send_question(session_id):
+    user_id = get_jwt_identity()
+    user = User.query.get(user_id)
+    session = LiveSession.query.get(session_id)
+    
+    if not session:
+        return jsonify({"error": "Session non trouvée"}), 404
+    if redis_client.get(f"live_session:{session_id}:questions_enabled") != b"true":
+        return jsonify({"error": "Les questions ne sont pas activées"}), 400
+
+    data = request.get_json()
+    question_text = data.get("question_text")
+    if not question_text:
+        return jsonify({"error": "Texte de la question requis"}), 400
+
+    new_question = LiveQuestion(
+        session_id=session_id,
+        user_id=user_id,
+        question_text=question_text
+    )
+    db.session.add(new_question)
+    db.session.commit()
+
+    socketio.emit('new_question', {
+        'id': new_question.id,
+        'session_id': session_id,
+        'user': user.fullname,
+        'question_text': question_text,
+        'timestamp': new_question.created_at.isoformat()
+    }, room=str(session_id), namespace='/live')
+    logger.info(f"Question envoyée pour la session {session_id} par {user.email}: {question_text}")
+    return jsonify({"message": "Question envoyée", "question_id": new_question.id}), 201
+
+@tnt_bp.route("/live-session/<int:session_id>/questions/<int:question_id>/answer", methods=["POST"])
+@jwt_required()
+@swag_from({
+    'tags': ['TNT'],
+    'summary': 'Répondre à une question textuelle',
+    'security': [{'BearerAuth': []}],
+    'parameters': [{
+        'name': 'session_id',
+        'in': 'path',
+        'required': True,
+        'type': 'integer'
+    }, {
+        'name': 'question_id',
+        'in': 'path',
+        'required': True,
+        'type': 'integer'
+    }, {
+        'name': 'body',
+        'in': 'body',
+        'required': True,
+        'schema': {'type': 'object', 'properties': {'answer_text': {'type': 'string'}}}
+    }],
+    'responses': {
+        '200': {'description': 'Réponse envoyée'},
+        '400': {'description': 'Texte de la réponse manquant'},
+        '403': {'description': 'Seuls les diffuseurs peuvent répondre'},
+        '404': {'description': 'Session ou question non trouvée'}
+    }
+})
+def answer_question(session_id, question_id):
+    user_id = get_jwt_identity()
+    user = User.query.get(user_id)
+    session = LiveSession.query.get(session_id)
+    question = LiveQuestion.query.get(question_id)
+    
+    if not session or not question:
+        return jsonify({"error": "Session ou question non trouvée"}), 404
+    if user.role != "doctor" or user_id not in [b.id for b in session.broadcasters]:
+        logger.warning(f"Tentative non autorisée de répondre par {user.email}")
+        return jsonify({"error": "Seuls les diffuseurs peuvent répondre"}), 403
+
+    data = request.get_json()
+    answer_text = data.get("answer_text")
+    if not answer_text:
+        return jsonify({"error": "Texte de la réponse requis"}), 400
+
+    question.answer_text = answer_text
+    question.answered_at = datetime.utcnow()
+    db.session.commit()
+
+    socketio.emit('new_answer', {
+        'question_id': question.id,
+        'session_id': session_id,
+        'user': user.fullname,
+        'answer_text': answer_text,
+        'timestamp': question.answered_at.isoformat()
+    }, room=str(session_id), namespace='/live')
+    logger.info(f"Réponse envoyée pour la question {question_id} par {user.email}")
+    return jsonify({"message": "Réponse envoyée"}), 200
+
+@tnt_bp.route("/live-session/<int:session_id>/questions", methods=["GET"])
+@jwt_required()
+@swag_from({
+    'tags': ['TNT'],
+    'summary': 'Récupérer les questions et réponses d’une session live',
+    'security': [{'BearerAuth': []}],
+    'parameters': [{
+        'name': 'session_id',
+        'in': 'path',
+        'required': True,
+        'type': 'integer'
+    }],
+    'responses': {
+        '200': {
+            'description': 'Liste des questions et réponses',
+            'schema': {
+                'type': 'array',
+                'items': {
+                    'type': 'object',
+                    'properties': {
+                        'id': {'type': 'integer'},
+                        'user': {'type': 'string'},
+                        'question_text': {'type': 'string'},
+                        'answer_text': {'type': 'string'},
+                        'timestamp': {'type': 'string'}
+                    }
+                }
+            }
+        },
+        '404': {'description': 'Session non trouvée'}
+    }
+})
+def get_questions(session_id):
+    session = LiveSession.query.get(session_id)
+    if not session:
+        return jsonify({"error": "Session non trouvée"}), 404
+
+    questions = LiveQuestion.query.filter_by(session_id=session_id).order_by(LiveQuestion.created_at.asc()).all()
+    result = [{
+        'id': q.id,
+        'user': q.user.fullname,
+        'question_text': q.question_text,
+        'answer_text': q.answer_text,
+        'timestamp': q.created_at.isoformat()
+    } for q in questions]
+    logger.info(f"Questions récupérées pour la session {session_id}")
+    return jsonify(result), 200
+
+# Nouvelles routes pour la file d'attente vidéo
+@tnt_bp.route("/live-session/<int:session_id>/video-queue/join", methods=["POST"])
+@jwt_required()
+@swag_from({
+    'tags': ['TNT'],
+    'summary': 'Rejoindre la file d’attente vidéo',
+    'security': [{'BearerAuth': []}],
+    'parameters': [{
+        'name': 'session_id',
+        'in': 'path',
+        'required': True,
+        'type': 'integer'
+    }],
+    'responses': {
+        '200': {'description': 'Ajouté à la file d’attente', 'schema': {'type': 'object', 'properties': {'position': {'type': 'integer'}}}},
+        '400': {'description': 'Déjà dans la file'},
+        '404': {'description': 'Session non trouvée'}
+    }
+})
+def join_video_queue(session_id):
+    user_id = get_jwt_identity()
+    user = User.query.get(user_id)
+    session = LiveSession.query.get(session_id)
+    
+    if not session:
+        return jsonify({"error": "Session non trouvée"}), 404
+    
+    # Vérifier si l'utilisateur est déjà dans la file
+    existing_entry = VideoQueue.query.filter_by(session_id=session_id, user_id=user_id, status='waiting').first()
+    if existing_entry:
+        return jsonify({"error": "Vous êtes déjà dans la file d’attente"}), 400
+
+    # Calculer la position (dernier + 1)
+    last_entry = VideoQueue.query.filter_by(session_id=session_id).order_by(VideoQueue.position.desc()).first()
+    position = (last_entry.position + 1) if last_entry else 1
+
+    new_entry = VideoQueue(
+        session_id=session_id,
+        user_id=user_id,
+        position=position,
+        status='waiting'
+    )
+    db.session.add(new_entry)
+    db.session.commit()
+
+    # Mettre à jour Redis
+    redis_client.rpush(f"live_session:{session_id}:video_queue", user_id)
+    socketio.emit('video_queue_update', {
+        'session_id': session_id,
+        'user_id': user_id,
+        'user': user.fullname,
+        'position': position,
+        'action': 'join'
+    }, room=str(session_id), namespace='/live')
+    logger.info(f"{user.email} a rejoint la file vidéo pour la session {session_id}")
+    return jsonify({"message": "Ajouté à la file d’attente", "position": position}), 200
+
+@tnt_bp.route("/live-session/<int:session_id>/video-queue/leave", methods=["POST"])
+@jwt_required()
+@swag_from({
+    'tags': ['TNT'],
+    'summary': 'Quitter la file d’attente vidéo',
+    'security': [{'BearerAuth': []}],
+    'parameters': [{
+        'name': 'session_id',
+        'in': 'path',
+        'required': True,
+        'type': 'integer'
+    }],
+    'responses': {
+        '200': {'description': 'Sorti de la file d’attente'},
+        '404': {'description': 'Session ou entrée non trouvée'}
+    }
+})
+def leave_video_queue(session_id):
+    user_id = get_jwt_identity()
+    user = User.query.get(user_id)
+    session = LiveSession.query.get(session_id)
+    
+    if not session:
+        return jsonify({"error": "Session non trouvée"}), 404
+    
+    entry = VideoQueue.query.filter_by(session_id=session_id, user_id=user_id, status='waiting').first()
+    if not entry:
+        return jsonify({"error": "Vous n’êtes pas dans la file d’attente"}), 404
+
+    entry.status = 'ended'
+    db.session.commit()
+
+    # Mettre à jour Redis
+    redis_client.lrem(f"live_session:{session_id}:video_queue", 0, user_id)
+    socketio.emit('video_queue_update', {
+        'session_id': session_id,
+        'user_id': user_id,
+        'user': user.fullname,
+        'action': 'leave'
+    }, room=str(session_id), namespace='/live')
+    
+    # Réorganiser les positions
+    update_video_queue_positions(session_id)
+    logger.info(f"{user.email} a quitté la file vidéo pour la session {session_id}")
+    return jsonify({"message": "Sorti de la file d’attente"}), 200
+
+@tnt_bp.route("/live-session/<int:session_id>/video-queue/next", methods=["POST"])
+@jwt_required()
+@swag_from({
+    'tags': ['TNT'],
+    'summary': 'Passer au prochain utilisateur dans la file vidéo',
+    'security': [{'BearerAuth': []}],
+    'parameters': [{
+        'name': 'session_id',
+        'in': 'path',
+        'required': True,
+        'type': 'integer'
+    }],
+    'responses': {
+        '200': {'description': 'Prochain utilisateur activé', 'schema': {'type': 'object', 'properties': {'user_id': {'type': 'integer'}, 'hls_url': {'type': 'string'}}}},
+        '400': {'description': 'Aucun utilisateur dans la file'},
+        '403': {'description': 'Seuls les diffuseurs peuvent passer au suivant'},
+        '404': {'description': 'Session non trouvée'}
+    }
+})
+def next_video_queue(session_id):
+    user_id = get_jwt_identity()
+    user = User.query.get(user_id)
+    session = LiveSession.query.get(session_id)
+    
+    if not session:
+        return jsonify({"error": "Session non trouvée"}), 404
+    if user.role != "doctor" or user_id not in [b.id for b in session.broadcasters]:
+        logger.warning(f"Tentative non autorisée de passer au suivant par {user.email}")
+        return jsonify({"error": "Seuls les diffuseurs peuvent passer au suivant"}), 403
+
+    # Trouver l'utilisateur actif actuel (s'il y en a un)
+    current_active = VideoQueue.query.filter_by(session_id=session_id, status='active').first()
+    if current_active:
+        current_active.status = 'ended'
+        db.session.commit()
+
+    # Trouver le prochain utilisateur en attente
+    next_entry = VideoQueue.query.filter_by(session_id=session_id, status='waiting').order_by(VideoQueue.position.asc()).first()
+    if not next_entry:
+        # Revenir au flux du diffuseur principal
+        hls_url = redis_client.hget(f"live_session:{session_id}:{session.host_doctor_id}", "hls_url")
+        if hls_url:
+            socketio.emit('video_stream_switch', {
+                'session_id': session_id,
+                'user_id': session.host_doctor_id,
+                'hls_url': hls_url.decode(),
+                'is_broadcaster': True
+            }, room=str(session_id), namespace='/live')
+            logger.info(f"Retour au flux du diffuseur pour la session {session_id}")
+            return jsonify({"message": "Aucun utilisateur dans la file, retour au diffuseur", "hls_url": hls_url.decode()}), 200
+        return jsonify({"error": "Aucun utilisateur dans la file et aucun flux diffuseur disponible"}), 400
+
+    # Activer le prochain utilisateur
+    next_entry.status = 'active'
+    db.session.commit()
+
+    # Générer l'URL HLS pour cet utilisateur
+    hls_url = f"http://localhost:8080/hls/live/{session_id}_{next_entry.user_id}.m3u8"
+    redis_client.hset(f"live_session:{session_id}:{next_entry.user_id}", mapping={"user_id": next_entry.user_id, "hls_url": hls_url})
+
+    # Supprimer l'utilisateur de la file Redis
+    redis_client.lrem(f"live_session:{session_id}:video_queue", 0, next_entry.user_id)
+    
+    # Réorganiser les positions
+    update_video_queue_positions(session_id)
+
+    socketio.emit('video_stream_switch', {
+        'session_id': session_id,
+        'user_id': next_entry.user_id,
+        'hls_url': hls_url,
+        'is_broadcaster': False
+    }, room=str(session_id), namespace='/live')
+    logger.info(f"Prochain utilisateur activé pour la session {session_id}: {next_entry.user_id}")
+    return jsonify({"message": "Prochain utilisateur activé", "user_id": next_entry.user_id, "hls_url": hls_url}), 200
+
+@tnt_bp.route("/live-session/<int:session_id>/video-queue/kick", methods=["POST"])
+@jwt_required()
+@swag_from({
+    'tags': ['TNT'],
+    'summary': 'Couper l’utilisateur actif de la file vidéo',
+    'security': [{'BearerAuth': []}],
+    'parameters': [{
+        'name': 'session_id',
+        'in': 'path',
+        'required': True,
+        'type': 'integer'
+    }],
+    'responses': {
+        '200': {'description': 'Utilisateur coupé'},
+        '403': {'description': 'Seuls les diffuseurs peuvent couper'},
+        '404': {'description': 'Session ou utilisateur actif non trouvé'}
+    }
+})
+def kick_video_queue(session_id):
+    user_id = get_jwt_identity()
+    user = User.query.get(user_id)
+    session = LiveSession.query.get(session_id)
+    
+    if not session:
+        return jsonify({"error": "Session non trouvée"}), 404
+    if user.role != "doctor" or user_id not in [b.id for b in session.broadcasters]:
+        logger.warning(f"Tentative non autorisée de couper par {user.email}")
+        return jsonify({"error": "Seuls les diffuseurs peuvent couper"}), 403
+
+    active_entry = VideoQueue.query.filter_by(session_id=session_id, status='active').first()
+    if not active_entry:
+        return jsonify({"error": "Aucun utilisateur actif"}), 404
+
+    active_entry.status = 'ended'
+    db.session.commit()
+
+    # Revenir au flux du diffuseur principal
+    hls_url = redis_client.hget(f"live_session:{session_id}:{session.host_doctor_id}", "hls_url")
+    if hls_url:
+        socketio.emit('video_stream_switch', {
+            'session_id': session_id,
+            'user_id': session.host_doctor_id,
+            'hls_url': hls_url.decode(),
+            'is_broadcaster': True
+        }, room=str(session_id), namespace='/live')
+        logger.info(f"Utilisateur coupé, retour au flux du diffuseur pour la session {session_id}")
+        return jsonify({"message": "Utilisateur coupé", "hls_url": hls_url.decode()}), 200
+    return jsonify({"error": "Aucun flux diffuseur disponible"}), 404
+
+# Fonction utilitaire pour réorganiser les positions dans la file
+def update_video_queue_positions(session_id):
+    entries = VideoQueue.query.filter_by(session_id=session_id, status='waiting').order_by(VideoQueue.position.asc()).all()
+    for index, entry in enumerate(entries, 1):
+        entry.position = index
+    db.session.commit()
+
+# Gestion WebSocket (événements existants inchangés)
 @socketio.on('connect', namespace='/live')
 def handle_connect():
     logger.info("Client connecté au namespace /live")
@@ -427,7 +860,7 @@ def on_send_comment(data):
     user_id = data['user_id']
     comment = data['comment']
     user = User.query.get(user_id)
-    comment_id = str(uuid.uuid4())  # ID unique pour éviter les doublons
+    comment_id = str(uuid.uuid4())
     logger.info(f"Commentaire dans {session_id} par {user.email}: {comment}")
     emit('new_comment', {
         'id': comment_id,

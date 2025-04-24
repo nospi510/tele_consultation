@@ -10,7 +10,7 @@ from flask_socketio import SocketIO
 
 db = SQLAlchemy()
 jwt = JWTManager()
-socketio = SocketIO(cors_allowed_origins="*")  # Assurez-vous que ceci est présent
+socketio = SocketIO(cors_allowed_origins="*")  
 
 def create_app():
     app = Flask(__name__)
