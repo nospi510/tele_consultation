@@ -1,6 +1,6 @@
 from datetime import datetime
 import subprocess
-from flask import Blueprint, request, jsonify, Response
+from flask import Blueprint, request, jsonify, Response, render_template, redirect, url_for, session
 from flasgger import swag_from
 from app.services.ollama_service import get_ai_diagnosis
 import requests
@@ -20,11 +20,10 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Connexion à Redis
-redis_client = redis.Redis(host='localhost', port=6379, db=0)
+redis_client = redis.Redis(host='192.168.1.42', port=6379, db=0)
 
 tnt_bp = Blueprint("tnt", __name__)
 
-# Routes existantes (inchangées)
 @tnt_bp.route("/advice", methods=["GET"])
 @swag_from({
     'tags': ['TNT'],
@@ -136,35 +135,29 @@ def proxy_channel(url):
         logger.error(f"Erreur inattendue dans le proxy pour {url} : {str(e)}")
         return jsonify({"error": f"Erreur : {str(e)}"}), 500
 
-@tnt_bp.route("/live-session/create", methods=["POST"])
-@jwt_required()
-@swag_from({
-    'tags': ['TNT'],
-    'summary': 'Créer une session live',
-    'security': [{'BearerAuth': []}],
-    'parameters': [{
-        'name': 'body',
-        'in': 'body',
-        'required': True,
-        'schema': {'type': 'object', 'properties': {'title': {'type': 'string'}}}
-    }],
-    'responses': {
-        '201': {'description': 'Session live créée'},
-        '403': {'description': 'Seuls les docteurs peuvent créer une session'},
-        '400': {'description': 'Erreur dans la requête'}
-    }
-})
+@tnt_bp.route("/live-session/create", methods=["GET", "POST"])
 def create_live_session():
-    user_id = get_jwt_identity()
+    """Affiche la page de création ou crée une session live"""
+    user_id = session.get("user_id")
+    if not user_id:
+        return redirect(url_for('auth.login'))
+
     user = User.query.get(user_id)
-    
     if user.role != "doctor":
         logger.warning(f"Tentative de création par non-docteur: {user.email}")
-        return jsonify({"error": "Seuls les docteurs peuvent créer"}), 403
+        return render_template("tnt/create_session.html", error="Seuls les docteurs peuvent créer", user=user), 403
 
-    data = request.get_json()
-    if not data.get("title"):
-        return jsonify({"error": "Titre requis"}), 400
+    if request.method == "GET":
+        return render_template("tnt/create_session.html", user=user)
+
+    if request.content_type == "application/json":
+        data = request.get_json()
+        if not data.get("title"):
+            return jsonify({"error": "Titre requis"}), 400
+    else:
+        data = request.form
+        if not data.get("title"):
+            return render_template("tnt/create_session.html", error="Titre requis", user=user), 400
 
     new_session = LiveSession(title=data["title"], host_doctor_id=user_id, is_active=True)
     db.session.add(new_session)
@@ -175,7 +168,9 @@ def create_live_session():
 
     logger.info(f"Session créée: {new_session.title} par {user.email}")
     socketio.emit('new_session', {'id': new_session.id, 'title': new_session.title, 'host': user.fullname}, namespace='/live')
-    return jsonify({"message": "Session créée", "session_id": new_session.id}), 201
+    if request.content_type == "application/json":
+        return jsonify({"message": "Session créée", "session_id": new_session.id}), 201
+    return redirect(url_for("tnt.list_live_sessions"))
 
 @tnt_bp.route("/live-session/join-as-broadcaster", methods=["POST"])
 @jwt_required()
@@ -216,31 +211,12 @@ def join_as_broadcaster():
     return jsonify({"message": "Ajouté comme diffuseur"}), 200
 
 @tnt_bp.route("/live-session/list", methods=["GET"])
-@jwt_required()
-@swag_from({
-    'tags': ['TNT'],
-    'summary': 'Lister les sessions live actives',
-    'security': [{'BearerAuth': []}],
-    'responses': {
-        '200': {
-            'description': 'Liste des sessions',
-            'schema': {
-                'type': 'array',
-                'items': {
-                    'type': 'object',
-                    'properties': {
-                        'id': {'type': 'integer'},
-                        'title': {'type': 'string'},
-                        'host': {'type': 'string'},
-                        'broadcasters': {'type': 'array', 'items': {'type': 'string'}},
-                        'hls_urls': {'type': 'array', 'items': {'type': 'string'}}
-                    }
-                }
-            }
-        }
-    }
-})
 def list_live_sessions():
+    """Affiche la liste des sessions live ou retourne JSON pour l'API"""
+    user_id = session.get("user_id")
+    if not user_id and not request.headers.get('Authorization'):
+        return redirect(url_for('auth.login'))
+
     sessions = LiveSession.query.filter_by(is_active=True).all()
     result = []
     for s in sessions:
@@ -256,8 +232,63 @@ def list_live_sessions():
             'broadcasters': [b.fullname for b in s.broadcasters],
             'hls_urls': hls_urls
         })
-    logger.info("Liste des sessions live demandée")
-    return jsonify(result), 200
+
+    if request.headers.get('Authorization'):
+        logger.info("Liste des sessions live demandée via API")
+        return jsonify(result), 200
+
+    user = User.query.get(user_id)
+    logger.info("Liste des sessions live affichée")
+    return render_template("tnt/live_sessions.html", sessions=result, user=user)
+
+@tnt_bp.route("/live-session/<int:session_id>", methods=["GET"])
+def live_session_detail(session_id):
+    """Affiche les détails d'une session live"""
+    user_id = session.get("user_id")
+    if not user_id:
+        return redirect(url_for('auth.login'))
+
+    user = User.query.get(user_id)
+    live_session = LiveSession.query.get(session_id)
+    if not live_session:
+        return render_template("tnt/live_session_detail.html", error="Session non trouvée", user=user), 404
+
+    hls_urls = []
+    for broadcaster in live_session.broadcasters:
+        data = redis_client.hgetall(f"live_session:{session_id}:{broadcaster.id}")
+        if data and b"hls_url" in data:
+            hls_urls.append({
+                "user_id": data[b"user_id"].decode(),
+                "hls_url": data[b"hls_url"].decode()
+            })
+
+    questions = LiveQuestion.query.filter_by(session_id=session_id).order_by(LiveQuestion.created_at.asc()).all()
+    question_data = [{
+        'id': q.id,
+        'user': q.user.fullname,
+        'question_text': q.question_text,
+        'answer_text': q.answer_text,
+        'timestamp': q.created_at.isoformat()
+    } for q in questions]
+
+    video_queue = VideoQueue.query.filter_by(session_id=session_id, status='waiting').order_by(VideoQueue.position.asc()).all()
+    queue_data = [{
+        'user_id': q.user_id,
+        'user': q.user.fullname,
+        'position': q.position
+    } for q in video_queue]
+
+    questions_enabled = redis_client.get(f"live_session:{session_id}:questions_enabled") == b"true"
+    is_broadcaster = user_id in [b.id for b in live_session.broadcasters]
+
+    return render_template("tnt/live_session_detail.html", 
+                          session=live_session, 
+                          hls_urls=hls_urls, 
+                          questions=question_data, 
+                          video_queue=queue_data, 
+                          questions_enabled=questions_enabled, 
+                          is_broadcaster=is_broadcaster, 
+                          user=user)
 
 @tnt_bp.route("/live-session/broadcast-url", methods=["POST"])
 @jwt_required()
@@ -362,9 +393,7 @@ def start_broadcast():
     logger.info(f"Diffusion WebRTC démarrée pour session {session_id} par {user_id}")
     return jsonify({"message": "Diffusion démarrée", "hls_url": hls_url}), 200
 
-# Nouvelles routes pour les questions textuelles
 @tnt_bp.route("/live-session/<int:session_id>/questions/enable", methods=["POST"])
-@jwt_required()
 @swag_from({
     'tags': ['TNT'],
     'summary': 'Activer les questions pour une session live',
@@ -382,23 +411,37 @@ def start_broadcast():
     }
 })
 def enable_questions(session_id):
-    user_id = get_jwt_identity()
+    # Vérification pour requêtes API (JWT)
+    if request.content_type == "application/json":
+        user_id = get_jwt_identity()
+    else:
+        # Vérification pour formulaires HTML (session)
+        user_id = session.get("user_id")
+        if not user_id:
+            return redirect(url_for('auth.login'))
+
     user = User.query.get(user_id)
-    session = LiveSession.query.get(session_id)
+    live_session = LiveSession.query.get(session_id)
     
-    if not session:
-        return jsonify({"error": "Session non trouvée"}), 404
-    if user.role != "doctor" or user_id not in [b.id for b in session.broadcasters]:
+    if not live_session:
+        if request.content_type == "application/json":
+            return jsonify({"error": "Session non trouvée"}), 404
+        return render_template("tnt/live_session_detail.html", error="Session non trouvée", user=user, session=live_session), 404
+    
+    if user.role != "doctor" or user_id not in [b.id for b in live_session.broadcasters]:
         logger.warning(f"Tentative non autorisée d'activer les questions par {user.email}")
-        return jsonify({"error": "Seuls les diffuseurs peuvent activer les questions"}), 403
+        if request.content_type == "application/json":
+            return jsonify({"error": "Seuls les diffuseurs peuvent activer les questions"}), 403
+        return render_template("tnt/live_session_detail.html", error="Seuls les diffuseurs peuvent activer les questions", user=user, session=live_session), 403
 
     redis_client.set(f"live_session:{session_id}:questions_enabled", "true")
     socketio.emit('questions_enabled', {'session_id': session_id}, room=str(session_id), namespace='/live')
     logger.info(f"Questions activées pour la session {session_id} par {user.email}")
-    return jsonify({"message": "Questions activées"}), 200
+    if request.content_type == "application/json":
+        return jsonify({"message": "Questions activées"}), 200
+    return redirect(url_for("tnt.live_session_detail", session_id=session_id))
 
 @tnt_bp.route("/live-session/<int:session_id>/questions/disable", methods=["POST"])
-@jwt_required()
 @swag_from({
     'tags': ['TNT'],
     'summary': 'Désactiver les questions pour une session live',
@@ -416,58 +459,61 @@ def enable_questions(session_id):
     }
 })
 def disable_questions(session_id):
-    user_id = get_jwt_identity()
+    # Vérification pour requêtes API (JWT)
+    if request.content_type == "application/json":
+        user_id = get_jwt_identity()
+    else:
+        # Vérification pour formulaires HTML (session)
+        user_id = session.get("user_id")
+        if not user_id:
+            return redirect(url_for('auth.login'))
+
     user = User.query.get(user_id)
-    session = LiveSession.query.get(session_id)
+    live_session = LiveSession.query.get(session_id)
     
-    if not session:
-        return jsonify({"error": "Session non trouvée"}), 404
-    if user.role != "doctor" or user_id not in [b.id for b in session.broadcasters]:
+    if not live_session:
+        if request.content_type == "application/json":
+            return jsonify({"error": "Session non trouvée"}), 404
+        return render_template("tnt/live_session_detail.html", error="Session non trouvée", user=user, session=live_session), 404
+    
+    if user.role != "doctor" or user_id not in [b.id for b in live_session.broadcasters]:
         logger.warning(f"Tentative non autorisée de désactiver les questions par {user.email}")
-        return jsonify({"error": "Seuls les diffuseurs peuvent désactiver les questions"}), 403
+        if request.content_type == "application/json":
+            return jsonify({"error": "Seuls les diffuseurs peuvent désactiver les questions"}), 403
+        return render_template("tnt/live_session_detail.html", error="Seuls les diffuseurs peuvent désactiver les questions", user=user, session=live_session), 403
 
     redis_client.set(f"live_session:{session_id}:questions_enabled", "false")
     socketio.emit('questions_disabled', {'session_id': session_id}, room=str(session_id), namespace='/live')
     logger.info(f"Questions désactivées pour la session {session_id} par {user.email}")
-    return jsonify({"message": "Questions désactivées"}), 200
+    if request.content_type == "application/json":
+        return jsonify({"message": "Questions désactivées"}), 200
+    return redirect(url_for("tnt.live_session_detail", session_id=session_id))
 
 @tnt_bp.route("/live-session/<int:session_id>/questions", methods=["POST"])
-@jwt_required()
-@swag_from({
-    'tags': ['TNT'],
-    'summary': 'Envoyer une question textuelle pour une session live',
-    'security': [{'BearerAuth': []}],
-    'parameters': [{
-        'name': 'session_id',
-        'in': 'path',
-        'required': True,
-        'type': 'integer'
-    }, {
-        'name': 'body',
-        'in': 'body',
-        'required': True,
-        'schema': {'type': 'object', 'properties': {'question_text': {'type': 'string'}}}
-    }],
-    'responses': {
-        '201': {'description': 'Question envoyée'},
-        '400': {'description': 'Texte de la question manquant ou questions désactivées'},
-        '404': {'description': 'Session non trouvée'}
-    }
-})
 def send_question(session_id):
-    user_id = get_jwt_identity()
+    """Envoyer une question textuelle pour une session live ou via formulaire"""
+    user_id = session.get("user_id")
+    if not user_id:
+        return redirect(url_for('auth.login'))
+
     user = User.query.get(user_id)
-    session = LiveSession.query.get(session_id)
+    live_session = LiveSession.query.get(session_id)
     
-    if not session:
+    if not live_session:
         return jsonify({"error": "Session non trouvée"}), 404
     if redis_client.get(f"live_session:{session_id}:questions_enabled") != b"true":
-        return jsonify({"error": "Les questions ne sont pas activées"}), 400
+        return render_template("tnt/live_session_detail.html", error="Les questions ne sont pas activées", user=user, session=live_session), 400
 
-    data = request.get_json()
-    question_text = data.get("question_text")
-    if not question_text:
-        return jsonify({"error": "Texte de la question requis"}), 400
+    if request.content_type == "application/json":
+        data = request.get_json()
+        question_text = data.get("question_text")
+        if not question_text:
+            return jsonify({"error": "Texte de la question requis"}), 400
+    else:
+        data = request.form
+        question_text = data.get("question_text")
+        if not question_text:
+            return render_template("tnt/live_session_detail.html", error="Texte de la question requis", user=user, session=live_session), 400
 
     new_question = LiveQuestion(
         session_id=session_id,
@@ -485,7 +531,9 @@ def send_question(session_id):
         'timestamp': new_question.created_at.isoformat()
     }, room=str(session_id), namespace='/live')
     logger.info(f"Question envoyée pour la session {session_id} par {user.email}: {question_text}")
-    return jsonify({"message": "Question envoyée", "question_id": new_question.id}), 201
+    if request.content_type == "application/json":
+        return jsonify({"message": "Question envoyée", "question_id": new_question.id}), 201
+    return redirect(url_for("tnt.live_session_detail", session_id=session_id))
 
 @tnt_bp.route("/live-session/<int:session_id>/questions/<int:question_id>/answer", methods=["POST"])
 @jwt_required()
@@ -595,39 +643,23 @@ def get_questions(session_id):
     logger.info(f"Questions récupérées pour la session {session_id}")
     return jsonify(result), 200
 
-# Nouvelles routes pour la file d'attente vidéo
 @tnt_bp.route("/live-session/<int:session_id>/video-queue/join", methods=["POST"])
-@jwt_required()
-@swag_from({
-    'tags': ['TNT'],
-    'summary': 'Rejoindre la file d’attente vidéo',
-    'security': [{'BearerAuth': []}],
-    'parameters': [{
-        'name': 'session_id',
-        'in': 'path',
-        'required': True,
-        'type': 'integer'
-    }],
-    'responses': {
-        '200': {'description': 'Ajouté à la file d’attente', 'schema': {'type': 'object', 'properties': {'position': {'type': 'integer'}}}},
-        '400': {'description': 'Déjà dans la file'},
-        '404': {'description': 'Session non trouvée'}
-    }
-})
 def join_video_queue(session_id):
-    user_id = get_jwt_identity()
+    """Rejoindre la file d’attente vidéo via formulaire ou API"""
+    user_id = session.get("user_id")
+    if not user_id:
+        return redirect(url_for('auth.login'))
+
     user = User.query.get(user_id)
-    session = LiveSession.query.get(session_id)
+    live_session = LiveSession.query.get(session_id)
     
-    if not session:
-        return jsonify({"error": "Session non trouvée"}), 404
+    if not live_session:
+        return render_template("tnt/live_session_detail.html", error="Session non trouvée", user=user), 404
     
-    # Vérifier si l'utilisateur est déjà dans la file
     existing_entry = VideoQueue.query.filter_by(session_id=session_id, user_id=user_id, status='waiting').first()
     if existing_entry:
-        return jsonify({"error": "Vous êtes déjà dans la file d’attente"}), 400
+        return render_template("tnt/live_session_detail.html", error="Vous êtes déjà dans la file d’attente", user=user, session=live_session), 400
 
-    # Calculer la position (dernier + 1)
     last_entry = VideoQueue.query.filter_by(session_id=session_id).order_by(VideoQueue.position.desc()).first()
     position = (last_entry.position + 1) if last_entry else 1
 
@@ -640,7 +672,6 @@ def join_video_queue(session_id):
     db.session.add(new_entry)
     db.session.commit()
 
-    # Mettre à jour Redis
     redis_client.rpush(f"live_session:{session_id}:video_queue", user_id)
     socketio.emit('video_queue_update', {
         'session_id': session_id,
@@ -650,41 +681,30 @@ def join_video_queue(session_id):
         'action': 'join'
     }, room=str(session_id), namespace='/live')
     logger.info(f"{user.email} a rejoint la file vidéo pour la session {session_id}")
-    return jsonify({"message": "Ajouté à la file d’attente", "position": position}), 200
+    if request.content_type == "application/json":
+        return jsonify({"message": "Ajouté à la file d’attente", "position": position}), 200
+    return redirect(url_for("tnt.live_session_detail", session_id=session_id))
 
 @tnt_bp.route("/live-session/<int:session_id>/video-queue/leave", methods=["POST"])
-@jwt_required()
-@swag_from({
-    'tags': ['TNT'],
-    'summary': 'Quitter la file d’attente vidéo',
-    'security': [{'BearerAuth': []}],
-    'parameters': [{
-        'name': 'session_id',
-        'in': 'path',
-        'required': True,
-        'type': 'integer'
-    }],
-    'responses': {
-        '200': {'description': 'Sorti de la file d’attente'},
-        '404': {'description': 'Session ou entrée non trouvée'}
-    }
-})
 def leave_video_queue(session_id):
-    user_id = get_jwt_identity()
+    """Quitter la file d’attente vidéo via formulaire ou API"""
+    user_id = session.get("user_id")
+    if not user_id:
+        return redirect(url_for('auth.login'))
+
     user = User.query.get(user_id)
-    session = LiveSession.query.get(session_id)
+    live_session = LiveSession.query.get(session_id)
     
-    if not session:
-        return jsonify({"error": "Session non trouvée"}), 404
+    if not live_session:
+        return render_template("tnt/live_session_detail.html", error="Session non trouvée", user=user), 404
     
     entry = VideoQueue.query.filter_by(session_id=session_id, user_id=user_id, status='waiting').first()
     if not entry:
-        return jsonify({"error": "Vous n’êtes pas dans la file d’attente"}), 404
+        return render_template("tnt/live_session_detail.html", error="Vous n’êtes pas dans la file d’attente", user=user, session=live_session), 404
 
     entry.status = 'ended'
     db.session.commit()
 
-    # Mettre à jour Redis
     redis_client.lrem(f"live_session:{session_id}:video_queue", 0, user_id)
     socketio.emit('video_queue_update', {
         'session_id': session_id,
@@ -693,13 +713,13 @@ def leave_video_queue(session_id):
         'action': 'leave'
     }, room=str(session_id), namespace='/live')
     
-    # Réorganiser les positions
     update_video_queue_positions(session_id)
     logger.info(f"{user.email} a quitté la file vidéo pour la session {session_id}")
-    return jsonify({"message": "Sorti de la file d’attente"}), 200
+    if request.content_type == "application/json":
+        return jsonify({"message": "Sorti de la file d’attente"}), 200
+    return redirect(url_for("tnt.live_session_detail", session_id=session_id))
 
 @tnt_bp.route("/live-session/<int:session_id>/video-queue/next", methods=["POST"])
-@jwt_required()
 @swag_from({
     'tags': ['TNT'],
     'summary': 'Passer au prochain utilisateur dans la file vidéo',
@@ -718,50 +738,60 @@ def leave_video_queue(session_id):
     }
 })
 def next_video_queue(session_id):
-    user_id = get_jwt_identity()
-    user = User.query.get(user_id)
-    session = LiveSession.query.get(session_id)
-    
-    if not session:
-        return jsonify({"error": "Session non trouvée"}), 404
-    if user.role != "doctor" or user_id not in [b.id for b in session.broadcasters]:
-        logger.warning(f"Tentative non autorisée de passer au suivant par {user.email}")
-        return jsonify({"error": "Seuls les diffuseurs peuvent passer au suivant"}), 403
+    # Vérification pour requêtes API (JWT)
+    if request.content_type == "application/json":
+        user_id = get_jwt_identity()
+    else:
+        # Vérification pour formulaires HTML (session)
+        user_id = session.get("user_id")
+        if not user_id:
+            return redirect(url_for('auth.login'))
 
-    # Trouver l'utilisateur actif actuel (s'il y en a un)
+    user = User.query.get(user_id)
+    live_session = LiveSession.query.get(session_id)
+    
+    if not live_session:
+        if request.content_type == "application/json":
+            return jsonify({"error": "Session non trouvée"}), 404
+        return render_template("tnt/live_session_detail.html", error="Session non trouvée", user=user, session=live_session), 404
+    
+    if user.role != "doctor" or user_id not in [b.id for b in live_session.broadcasters]:
+        logger.warning(f"Tentative non autorisée de passer au suivant par {user.email}")
+        if request.content_type == "application/json":
+            return jsonify({"error": "Seuls les diffuseurs peuvent passer au suivant"}), 403
+        return render_template("tnt/live_session_detail.html", error="Seuls les diffuseurs peuvent passer au suivant", user=user, session=live_session), 403
+
     current_active = VideoQueue.query.filter_by(session_id=session_id, status='active').first()
     if current_active:
         current_active.status = 'ended'
         db.session.commit()
 
-    # Trouver le prochain utilisateur en attente
     next_entry = VideoQueue.query.filter_by(session_id=session_id, status='waiting').order_by(VideoQueue.position.asc()).first()
     if not next_entry:
-        # Revenir au flux du diffuseur principal
-        hls_url = redis_client.hget(f"live_session:{session_id}:{session.host_doctor_id}", "hls_url")
+        hls_url = redis_client.hget(f"live_session:{session_id}:{live_session.host_doctor_id}", "hls_url")
         if hls_url:
             socketio.emit('video_stream_switch', {
                 'session_id': session_id,
-                'user_id': session.host_doctor_id,
+                'user_id': live_session.host_doctor_id,
                 'hls_url': hls_url.decode(),
                 'is_broadcaster': True
             }, room=str(session_id), namespace='/live')
             logger.info(f"Retour au flux du diffuseur pour la session {session_id}")
-            return jsonify({"message": "Aucun utilisateur dans la file, retour au diffuseur", "hls_url": hls_url.decode()}), 200
-        return jsonify({"error": "Aucun utilisateur dans la file et aucun flux diffuseur disponible"}), 400
+            if request.content_type == "application/json":
+                return jsonify({"message": "Aucun utilisateur dans la file, retour au diffuseur", "hls_url": hls_url.decode()}), 200
+            return redirect(url_for("tnt.live_session_detail", session_id=session_id))
+        if request.content_type == "application/json":
+            return jsonify({"error": "Aucun utilisateur dans la file et aucun flux diffuseur disponible"}), 400
+        return render_template("tnt/live_session_detail.html", error="Aucun utilisateur dans la file et aucun flux diffuseur disponible", user=user, session=live_session), 400
 
-    # Activer le prochain utilisateur
     next_entry.status = 'active'
     db.session.commit()
 
-    # Générer l'URL HLS pour cet utilisateur
     hls_url = f"http://localhost:8080/hls/live/{session_id}_{next_entry.user_id}.m3u8"
     redis_client.hset(f"live_session:{session_id}:{next_entry.user_id}", mapping={"user_id": next_entry.user_id, "hls_url": hls_url})
 
-    # Supprimer l'utilisateur de la file Redis
     redis_client.lrem(f"live_session:{session_id}:video_queue", 0, next_entry.user_id)
     
-    # Réorganiser les positions
     update_video_queue_positions(session_id)
 
     socketio.emit('video_stream_switch', {
@@ -771,10 +801,11 @@ def next_video_queue(session_id):
         'is_broadcaster': False
     }, room=str(session_id), namespace='/live')
     logger.info(f"Prochain utilisateur activé pour la session {session_id}: {next_entry.user_id}")
-    return jsonify({"message": "Prochain utilisateur activé", "user_id": next_entry.user_id, "hls_url": hls_url}), 200
+    if request.content_type == "application/json":
+        return jsonify({"message": "Prochain utilisateur activé", "user_id": next_entry.user_id, "hls_url": hls_url}), 200
+    return redirect(url_for("tnt.live_session_detail", session_id=session_id))
 
 @tnt_bp.route("/live-session/<int:session_id>/video-queue/kick", methods=["POST"])
-@jwt_required()
 @swag_from({
     'tags': ['TNT'],
     'summary': 'Couper l’utilisateur actif de la file vidéo',
@@ -792,44 +823,60 @@ def next_video_queue(session_id):
     }
 })
 def kick_video_queue(session_id):
-    user_id = get_jwt_identity()
+    # Vérification pour requêtes API (JWT)
+    if request.content_type == "application/json":
+        user_id = get_jwt_identity()
+    else:
+        # Vérification pour formulaires HTML (session)
+        user_id = session.get("user_id")
+        if not user_id:
+            return redirect(url_for('auth.login'))
+
     user = User.query.get(user_id)
-    session = LiveSession.query.get(session_id)
+    live_session = LiveSession.query.get(session_id)
     
-    if not session:
-        return jsonify({"error": "Session non trouvée"}), 404
-    if user.role != "doctor" or user_id not in [b.id for b in session.broadcasters]:
+    if not live_session:
+        if request.content_type == "application/json":
+            return jsonify({"error": "Session non trouvée"}), 404
+        return render_template("tnt/live_session_detail.html", error="Session non trouvée", user=user, session=live_session), 404
+    
+    if user.role != "doctor" or user_id not in [b.id for b in live_session.broadcasters]:
         logger.warning(f"Tentative non autorisée de couper par {user.email}")
-        return jsonify({"error": "Seuls les diffuseurs peuvent couper"}), 403
+        if request.content_type == "application/json":
+            return jsonify({"error": "Seuls les diffuseurs peuvent couper"}), 403
+        return render_template("tnt/live_session_detail.html", error="Seuls les diffuseurs peuvent couper", user=user, session=live_session), 403
 
     active_entry = VideoQueue.query.filter_by(session_id=session_id, status='active').first()
     if not active_entry:
-        return jsonify({"error": "Aucun utilisateur actif"}), 404
+        if request.content_type == "application/json":
+            return jsonify({"error": "Aucun utilisateur actif"}), 404
+        return render_template("tnt/live_session_detail.html", error="Aucun utilisateur actif", user=user, session=live_session), 404
 
     active_entry.status = 'ended'
     db.session.commit()
 
-    # Revenir au flux du diffuseur principal
-    hls_url = redis_client.hget(f"live_session:{session_id}:{session.host_doctor_id}", "hls_url")
+    hls_url = redis_client.hget(f"live_session:{session_id}:{live_session.host_doctor_id}", "hls_url")
     if hls_url:
         socketio.emit('video_stream_switch', {
             'session_id': session_id,
-            'user_id': session.host_doctor_id,
+            'user_id': live_session.host_doctor_id,
             'hls_url': hls_url.decode(),
             'is_broadcaster': True
         }, room=str(session_id), namespace='/live')
         logger.info(f"Utilisateur coupé, retour au flux du diffuseur pour la session {session_id}")
-        return jsonify({"message": "Utilisateur coupé", "hls_url": hls_url.decode()}), 200
-    return jsonify({"error": "Aucun flux diffuseur disponible"}), 404
+        if request.content_type == "application/json":
+            return jsonify({"message": "Utilisateur coupé", "hls_url": hls_url.decode()}), 200
+        return redirect(url_for("tnt.live_session_detail", session_id=session_id))
+    if request.content_type == "application/json":
+        return jsonify({"error": "Aucun flux diffuseur disponible"}), 404
+    return render_template("tnt/live_session_detail.html", error="Aucun flux diffuseur disponible", user=user, session=live_session), 404
 
-# Fonction utilitaire pour réorganiser les positions dans la file
 def update_video_queue_positions(session_id):
     entries = VideoQueue.query.filter_by(session_id=session_id, status='waiting').order_by(VideoQueue.position.asc()).all()
     for index, entry in enumerate(entries, 1):
         entry.position = index
     db.session.commit()
 
-# Gestion WebSocket (événements existants inchangés)
 @socketio.on('connect', namespace='/live')
 def handle_connect():
     logger.info("Client connecté au namespace /live")
