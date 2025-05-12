@@ -1,92 +1,76 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, render_template, redirect, url_for, session
 from app import db, jwt
 from app.models.user import User
 from werkzeug.security import generate_password_hash, check_password_hash
-from flask_jwt_extended import create_access_token
+from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
 from flasgger import swag_from
-from flask_jwt_extended import jwt_required, get_jwt_identity
 
 auth_bp = Blueprint("auth", __name__)
 
-@auth_bp.route("/register", methods=["POST"])
-@swag_from({
-    'tags': ['Auth'],
-    'summary': 'Créer un utilisateur',
-    'parameters': [{
-        'name': 'body',
-        'in': 'body',
-        'required': True,
-        'schema': {
-            'type': 'object',
-            'properties': {
-                'fullname': {'type': 'string'},
-                'email': {'type': 'string'},
-                'password': {'type': 'string'}
-            }
-        }
-    }],
-    'responses': {
-        '201': {'description': 'Utilisateur créé'},
-        '400': {'description': 'Erreur dans la requête'}
-    }
-})
+@auth_bp.route("/register", methods=["GET", "POST"])
 def register():
-    """Enregistre un nouvel utilisateur"""
-    data = request.get_json()
+    """Affiche la page d'inscription ou enregistre un nouvel utilisateur"""
+    if request.method == "GET":
+        return render_template("auth/register.html")
+
+    # Vérifier le type de contenu
+    if request.content_type == "application/json":
+        data = request.get_json()
+        if not data or not all(key in data for key in ["fullname", "email", "password"]):
+            return jsonify({"error": "Données manquantes"}), 400
+    else:
+        data = request.form
+        if not data or not all(key in data for key in ["fullname", "email", "password"]):
+            return render_template("auth/register.html", error="Tous les champs sont requis"), 400
+
+    # Vérifier si l'email existe déjà
+    if User.query.filter_by(email=data["email"]).first():
+        if request.content_type == "application/json":
+            return jsonify({"error": "Email déjà utilisé"}), 400
+        return render_template("auth/register.html", error="Email déjà utilisé"), 400
+
     hashed_password = generate_password_hash(data["password"], method="pbkdf2:sha256")
     new_user = User(fullname=data["fullname"], email=data["email"], password_hash=hashed_password)
-    
+
     db.session.add(new_user)
     db.session.commit()
 
-    return jsonify({"message": "User created successfully"}), 201
+    if request.content_type == "application/json":
+        return jsonify({"message": "User created successfully"}), 201
+    return redirect(url_for("auth.login"))
 
-@auth_bp.route("/login", methods=["POST"])
-@swag_from({
-    'tags': ['Auth'],
-    'summary': 'Connexion utilisateur',
-    'parameters': [{
-        'name': 'body',
-        'in': 'body',
-        'required': True,
-        'schema': {
-            'type': 'object',
-            'properties': {
-                'email': {'type': 'string', 'example': 'nick@visiotech.me'},
-                'password': {'type': 'string', 'example': 'passer'}
-            }
-        }
-    }],
-    'responses': {
-        '200': {
-            'description': 'Connexion réussie',
-            'schema': {
-                'type': 'object',
-                'properties': {
-                    'access_token': {'type': 'string'},
-                    'user_role': {'type': 'string'}  # Ajout dans la documentation
-                }
-            }
-        },
-        '401': {
-            'description': 'Identifiants invalides'
-        }
-    }
-})
+@auth_bp.route("/login", methods=["GET", "POST"])
 def login():
-    """Connexion utilisateur avec JWT"""
-    data = request.get_json()
+    """Affiche la page de connexion ou connecte un utilisateur"""
+    if request.method == "GET":
+        return render_template("auth/login.html")
+
+    # Vérifier le type de contenu
+    if request.content_type == "application/json":
+        data = request.get_json()
+        if not data or not all(key in data for key in ["email", "password"]):
+            return jsonify({"error": "Données manquantes"}), 400
+    else:
+        data = request.form
+        if not data or not all(key in data for key in ["email", "password"]):
+            return render_template("auth/login.html", error="Tous les champs sont requis"), 400
+
     user = User.query.filter_by(email=data["email"]).first()
 
     if user and check_password_hash(user.password_hash, data["password"]):
         token = create_access_token(identity=str(user.id))
-        return jsonify({
-            "access_token": token,
-            "user_role": user.role,  # Ajout du rôle dans la réponse
-            'user_id': user.id  # Optionnel si déjà dans le JWT
-        }), 200
+        session["user_id"] = user.id  # Stocker l'ID utilisateur dans la session pour les templates
+        if request.content_type == "application/json":
+            return jsonify({
+                "access_token": token,
+                "user_role": user.role,
+                "user_id": user.id
+            }), 200
+        return redirect(url_for("auth.home_page"))
 
-    return jsonify({"error": "Invalid credentials"}), 401
+    if request.content_type == "application/json":
+        return jsonify({"error": "Identifiants invalides"}), 401
+    return render_template("auth/login.html", error="Identifiants invalides"), 401
 
 @auth_bp.route("/home", methods=["GET"])
 @jwt_required()
@@ -111,7 +95,7 @@ def login():
     }
 })
 def home():
-    """Récupérer les informations de l’utilisateur connecté pour la page d’accueil"""
+    """Récupérer les informations de l’utilisateur connecté pour la page d’accueil (API)"""
     user_id = get_jwt_identity()
     user = User.query.get(user_id)
 
@@ -124,3 +108,23 @@ def home():
         'email': user.email,
         'role': user.role
     }), 200
+
+@auth_bp.route("/home_page", methods=["GET"])
+def home_page():
+    """Affiche le tableau de bord"""
+    user_id = session.get("user_id")
+    if not user_id:
+        return redirect(url_for('auth.login'))
+
+    user = User.query.get(user_id)
+    if not user:
+        session.pop('user_id', None)
+        return redirect(url_for('auth.login'))
+
+    return render_template("home.html", user=user)
+
+@auth_bp.route("/logout", methods=["GET"])
+def logout():
+    """Déconnexion de l'utilisateur"""
+    session.pop('user_id', None)
+    return redirect(url_for('auth.login'))

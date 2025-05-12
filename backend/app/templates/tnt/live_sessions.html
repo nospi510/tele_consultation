@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+{% block title %}Sessions live{% endblock %}
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <h2>Sessions live actives</h2>
+        {% if sessions %}
+            <ul class="list-group">
+                {% for session in sessions %}
+                    <li class="list-group-item">
+                        <h5>{{ session.title }}</h5>
+                        <p>Hôte: {{ session.host }}</p>
+                        <p>Diffuseurs: {{ session.broadcasters|join(', ') }}</p>
+                        <a href="{{ url_for('tnt.live_session_detail', session_id=session.id) }}" class="btn btn-primary">Rejoindre</a>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p>Aucune session live active.</p>
+        {% endif %}
+        {% if user.role == 'doctor' %}
+            <a href="{{ url_for('tnt.create_live_session') }}" class="btn btn-success mt-3">Créer une nouvelle session</a>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

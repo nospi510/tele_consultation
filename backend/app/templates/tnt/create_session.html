@@ -1,0 +1,19 @@
+{% extends 'base.html' %}
+{% block title %}Créer une session live{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <h2>Créer une session live</h2>
+        {% if error %}
+            <div class="alert alert-danger">{{ error }}</div>
+        {% endif %}
+        <form method="POST" action="{{ url_for('tnt.create_live_session') }}">
+            <div class="mb-3">
+                <label for="title" class="form-label">Titre de la session</label>
+                <input type="text" class="form-control" id="title" name="title" required>
+            </div>
+            <button type="submit" class="btn btn-primary">Créer la session</button>
+        </form>
+    </div>
+</div>
+{% endblock %}
