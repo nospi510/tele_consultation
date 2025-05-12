@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+{% block title %}Tableau de bord{% endblock %}
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <h2>Bienvenue, {{ user.fullname }}</h2>
+        <p>Rôle: {{ user.role }}</p>
+        {% if user.role == 'patient' %}
+            <a href="{{ url_for('tnt.list_live_sessions') }}" class="btn btn-primary">Voir les sessions live</a>
+            <a href="#" class="btn btn-secondary">Consulter mes consultations</a>
+        {% elif user.role == 'doctor' %}
+            <a href="{{ url_for('tnt.create_live_session') }}" class="btn btn-primary">Créer une session live</a>
+            <a href="{{ url_for('tnt.list_live_sessions') }}" class="btn btn-secondary">Voir les sessions live</a>
+            <a href="#" class="btn btn-secondary">Voir mes rendez-vous</a>
+        {% elif user.role == 'admin' %}
+            <a href="#" class="btn btn-primary">Gérer les utilisateurs</a>
+            <a href="#" class="btn btn-secondary">Voir les statistiques</a>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
