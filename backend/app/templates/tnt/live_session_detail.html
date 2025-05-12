@@ -92,8 +92,9 @@
     </div>
 </div>
 
-<!-- SocketIO et script JavaScript -->
+<!-- SocketIO, hls.js et script JavaScript -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.5.4/socket.io.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/hls.js@1.4.12"></script>
 <script>
     // Connexion à SocketIO
     const socket = io('/live', { transports: ['websocket'] });
@@ -151,36 +152,82 @@
         });
     });
 
+    // Fonction pour charger la vidéo HLS
+    function loadVideo(hlsUrl) {
+        console.log('Chargement vidéo HLS:', hlsUrl);
+        const videoPlayer = document.getElementById('video-player');
+        // Supprimer l'ancienne source pour éviter les conflits
+        videoPlayer.innerHTML = '';
+        const source = document.createElement('source');
+        source.setAttribute('type', 'application/x-mpegURL');
+        source.setAttribute('src', hlsUrl);
+        videoPlayer.appendChild(source);
+
+        if (Hls.isSupported() && !videoPlayer.canPlayType('application/vnd.apple.mpegurl')) {
+            console.log('Utilisation de hls.js pour charger le flux');
+            const hls = new Hls({
+                enableWorker: true,
+                maxBufferLength: 15,
+                liveSyncDurationCount: 3,
+                liveMaxLatencyDurationCount: 6,
+                fragLoadingTimeOut: 10000,
+                manifestLoadingTimeOut: 5000,
+                levelLoadingTimeOut: 10000,
+                capLevelToPlayerSize: true,
+                progressive: true // Charger les fragments progressivement
+            });
+            hls.loadSource(hlsUrl);
+            hls.attachMedia(videoPlayer);
+            hls.on(Hls.Events.MANIFEST_PARSED, () => {
+                const codecs = hls.levels[0]?.codecs || 'undefined';
+                console.log('Manifeste HLS chargé, codecs:', codecs);
+                if (codecs === 'undefined' || !codecs.includes('avc1')) {
+                    console.warn('Avertissement: Codec vidéo manquant ou non détecté');
+                }
+                videoPlayer.play().catch(err => {
+                    console.error('Erreur lecture HLS:', err);
+                });
+            });
+            hls.on(Hls.Events.ERROR, (event, data) => {
+                console.error('Erreur HLS détaillée:', data);
+                if (data.details === 'bufferStalledError') {
+                    console.log('Tentative de récupération après bufferStalledError');
+                    hls.startLoad(); // Réessayer le chargement
+                }
+                if (data.fatal) {
+                    console.error('Erreur fatale HLS:', data);
+                    hls.destroy();
+                    alert('Erreur critique lors du chargement du flux vidéo. Veuillez réessayer.');
+                }
+            });
+            hls.on(Hls.Events.LEVEL_LOADED, (event, data) => {
+                console.log('Niveau HLS chargé:', data);
+            });
+            hls.on(Hls.Events.FRAG_LOADED, (event, data) => {
+                console.log('Fragment HLS chargé:', data.frag.url);
+            });
+        } else if (videoPlayer.canPlayType('application/vnd.apple.mpegurl')) {
+            console.log('Utilisation du support HLS natif');
+            videoPlayer.load();
+            videoPlayer.play().catch(err => {
+                console.error('Erreur lecture vidéo natif:', err);
+            });
+        } else {
+            console.error('HLS non supporté par ce navigateur');
+            alert('Votre navigateur ne supporte pas HLS. Essayez Chrome, Firefox ou Safari.');
+        }
+    }
+
     // Gérer le changement de flux vidéo
     socket.on('video_stream_switch', (data) => {
         console.log('Événement video_stream_switch reçu:', data);
-        const videoPlayer = document.getElementById('video-player');
-        const source = videoPlayer.querySelector('source');
-        if (source) {
-            source.src = data.hls_url;
-            videoPlayer.load();
-            videoPlayer.play().catch(err => {
-                console.error('Erreur lecture vidéo:', err);
-            });
-        } else {
-            console.error('Élément <source> non trouvé dans video-player');
-        }
+        loadVideo(data.hls_url);
     });
 
     // Gérer l'événement start_broadcast
     socket.on('start_broadcast', (data) => {
         console.log('Événement start_broadcast reçu:', data);
-        const videoPlayer = document.getElementById('video-player');
-        const source = videoPlayer.querySelector('source') || document.createElement('source');
-        source.setAttribute('src', data.hls_url);
-        source.setAttribute('type', 'application/x-mpegURL');
-        if (!videoPlayer.querySelector('source')) {
-            videoPlayer.appendChild(source);
-        }
-        videoPlayer.load();
-        videoPlayer.play().catch(err => {
-            console.error('Erreur lecture vidéo après start_broadcast:', err);
-        });
+        loadVideo(data.hls_url);
     });
 
     // Gérer l'activation des questions
@@ -226,6 +273,22 @@
                     video: true,
                     audio: true
                 });
+                console.log('Flux caméra/micro obtenu:', {
+                    videoTracks: localStream.getVideoTracks().length,
+                    audioTracks: localStream.getAudioTracks().length,
+                    tracks: localStream.getTracks()
+                });
+
+                // Ajouter un aperçu local pour tester
+                const previewVideo = document.createElement('video');
+                previewVideo.muted = true;
+                previewVideo.style.width = '200px';
+                previewVideo.style.position = 'absolute';
+                previewVideo.style.top = '10px';
+                previewVideo.style.right = '10px';
+                document.body.appendChild(previewVideo);
+                previewVideo.srcObject = localStream;
+                previewVideo.play().catch(err => console.error('Erreur aperçu vidéo:', err));
 
                 // Configurer WebRTC
                 const configuration = {
@@ -308,8 +371,8 @@
                     sdp: data.sdp
                 });
 
-                // Attendre un peu pour que le flux soit établi
-                await new Promise(resolve => setTimeout(resolve, 5000));
+                // Attendre que le flux soit établi
+                await new Promise(resolve => setTimeout(resolve, 2000));
 
                 // Stocker l'URL HLS dans Redis avec authentification
                 const hlsUrl = `http://localhost:8080/hls/live/{{ session.id }}_{{ user.id }}.m3u8`;
@@ -370,10 +433,19 @@
             localStream = null;
             peerConnection = null;
 
+            // Supprimer l'aperçu vidéo
+            const previewVideo = document.querySelector('video[style*="position: absolute"]');
+            if (previewVideo) previewVideo.remove();
+
             startBroadcastButton.style.display = 'inline-block';
             stopBroadcastButton.style.display = 'none';
             console.log('Diffusion arrêtée');
         });
+    {% endif %}
+
+    // Charger le flux HLS initial s'il existe
+    {% if hls_urls %}
+        loadVideo('{{ hls_urls[0].hls_url }}');
     {% endif %}
 </script>
 {% endblock %}
