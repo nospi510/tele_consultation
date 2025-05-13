@@ -1,5 +1,6 @@
 from datetime import timedelta
-from flask import Flask
+from flask import Flask,jsonify
+from flask_session import Session
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_jwt_extended import JWTManager
@@ -7,15 +8,33 @@ from flask_cors import CORS
 from flasgger import Swagger
 import os
 from flask_socketio import SocketIO
+import redis
+
+
 
 db = SQLAlchemy()
 jwt = JWTManager()
 socketio = SocketIO(cors_allowed_origins="*")  
 
+# Création du client Redis
+redis_client = redis.StrictRedis(host='192.168.1.42', port=6379, db=0)
+
 def create_app():
     app = Flask(__name__)
     app.config.from_object('app.config.Config')
     app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(hours=24)  # Token valable 24h
+
+
+
+    # Configuration des sessions avec Redis
+    
+    app.config['SESSION_TYPE'] = 'redis'
+    app.config['SESSION_REDIS'] = redis_client
+    app.config['SESSION_PERMANENT'] = True
+    app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=24)
+
+    Session(app)  # ⚠️ Initialiser la gestion de session
+
 
     db.init_app(app)
     Migrate(app, db)
@@ -58,4 +77,14 @@ def create_app():
     app.register_blueprint(user_bp, url_prefix="/api/users")
     app.register_blueprint(tnt_bp, url_prefix="/api/tnt")
 
+        # Gestion des erreurs globales
+    @app.errorhandler(404)
+    def not_found(error):
+        return jsonify({"error": "Ressource non trouvée"}), 404
+
+    @app.errorhandler(500)
+    def server_error(error):
+        return jsonify({"error": "Erreur interne du serveur"}), 500
+
     return app, socketio  # Retourne app et socketio
+
