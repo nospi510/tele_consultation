@@ -12,12 +12,14 @@
         <!-- Diffusion vidéo -->
         <div class="mb-4">
             <h4>Diffusion en direct</h4>
-            <video id="video-player" controls autoplay muted style="width: 100%;">
-                {% if hls_urls %}
-                    <source src="{{ hls_urls[0].hls_url }}" type="application/x-mpegURL">
-                {% endif %}
-                Votre navigateur ne supporte pas la vidéo.
-            </video>
+            <div id="video-container">
+                <video id="video-player" controls autoplay muted style="width: 100%;">
+                    Votre navigateur ne supporte pas la vidéo.
+                </video>
+                <div id="no-stream-message" style="display: none; text-align: center; color: #666;">
+                    <p>Aucune diffusion en cours pour le moment.</p>
+                </div>
+            </div>
             {% if is_broadcaster %}
                 <div id="broadcaster-controls" class="mt-3">
                     <button id="start-broadcast" class="btn btn-primary">Démarrer la diffusion</button>
@@ -145,11 +147,15 @@
         console.log('Chargement vidéo HLS:', hlsUrl);
         sessionStorage.setItem('currentHlsUrl', hlsUrl); // Stocker l'URL
         const videoPlayer = document.getElementById('video-player');
+        const noStreamMessage = document.getElementById('no-stream-message');
         videoPlayer.innerHTML = '';
         const source = document.createElement('source');
         source.setAttribute('type', 'application/x-mpegURL');
         source.setAttribute('src', hlsUrl);
         videoPlayer.appendChild(source);
+
+        videoPlayer.style.display = 'block';
+        noStreamMessage.style.display = 'none';
 
         if (Hls.isSupported() && !videoPlayer.canPlayType('application/vnd.apple.mpegurl')) {
             console.log('Utilisation de hls.js pour charger le flux');
@@ -204,6 +210,15 @@
             console.error('HLS non supporté par ce navigateur');
             alert('Votre navigateur ne supporte pas HLS. Essayez Chrome, Firefox ou Safari.');
         }
+    }
+
+    // Fonction pour afficher le message "Aucune diffusion"
+    function showNoStreamMessage() {
+        console.log('Aucune diffusion active, affichage du message');
+        const videoPlayer = document.getElementById('video-player');
+        const noStreamMessage = document.getElementById('no-stream-message');
+        videoPlayer.style.display = 'none';
+        noStreamMessage.style.display = 'block';
     }
 
     // Gérer le changement de flux vidéo
@@ -502,16 +517,24 @@
             startBroadcastButton.style.display = 'inline-block';
             stopBroadcastButton.style.display = 'none';
             sessionStorage.removeItem('currentHlsUrl'); // Nettoyer l'URL
+            showNoStreamMessage(); // Afficher le message
             console.log('Diffusion arrêtée');
         });
     {% endif %}
 
-    // Recharger la vidéo si l'URL HLS est stockée
+    // Initialisation au chargement de la page
+    const hlsUrls = {{ hls_urls | tojson }};
+    console.log('hls_urls reçu:', hlsUrls);
     const savedHlsUrl = sessionStorage.getItem('currentHlsUrl');
     if (savedHlsUrl) {
+        console.log('Chargement depuis sessionStorage:', savedHlsUrl);
         loadVideo(savedHlsUrl);
-    } else if ({{ hls_urls | tojson }}) {
-        loadVideo('{{ hls_urls[0].hls_url }}');
+    } else if (hlsUrls && hlsUrls.length > 0 && hlsUrls[0].hls_url) {
+        console.log('Chargement depuis hls_urls:', hlsUrls[0].hls_url);
+        loadVideo(hlsUrls[0].hls_url);
+    } else {
+        console.log('Aucun flux HLS disponible');
+        showNoStreamMessage();
     }
 </script>
 {% endblock %}

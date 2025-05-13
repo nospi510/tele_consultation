@@ -261,6 +261,7 @@ def live_session_detail(session_id):
                 "user_id": data[b"user_id"].decode(),
                 "hls_url": data[b"hls_url"].decode()
             })
+    print(f"hls_urls: {hls_urls}")  # Log pour diagnostic
 
     questions = LiveQuestion.query.filter_by(session_id=session_id).order_by(LiveQuestion.created_at.asc()).all()
     question_data = [{
@@ -394,6 +395,7 @@ def start_broadcast():
     return jsonify({"message": "Diffusion démarrée", "hls_url": hls_url}), 200
 
 @tnt_bp.route("/live-session/<int:session_id>/questions/enable", methods=["POST"])
+@jwt_required()
 @swag_from({
     'tags': ['TNT'],
     'summary': 'Activer les questions pour une session live',
@@ -442,6 +444,7 @@ def enable_questions(session_id):
     return redirect(url_for("tnt.live_session_detail", session_id=session_id))
 
 @tnt_bp.route("/live-session/<int:session_id>/questions/disable", methods=["POST"])
+@jwt_required()
 @swag_from({
     'tags': ['TNT'],
     'summary': 'Désactiver les questions pour une session live',
@@ -644,6 +647,7 @@ def get_questions(session_id):
     return jsonify(result), 200
 
 @tnt_bp.route("/live-session/<int:session_id>/video-queue/join", methods=["POST"])
+@jwt_required()
 def join_video_queue(session_id):
     """Rejoindre la file d’attente vidéo via formulaire ou API"""
     user_id = session.get("user_id")
@@ -686,6 +690,7 @@ def join_video_queue(session_id):
     return redirect(url_for("tnt.live_session_detail", session_id=session_id))
 
 @tnt_bp.route("/live-session/<int:session_id>/video-queue/leave", methods=["POST"])
+@jwt_required()
 def leave_video_queue(session_id):
     """Quitter la file d’attente vidéo via formulaire ou API"""
     user_id = session.get("user_id")
@@ -720,6 +725,7 @@ def leave_video_queue(session_id):
     return redirect(url_for("tnt.live_session_detail", session_id=session_id))
 
 @tnt_bp.route("/live-session/<int:session_id>/video-queue/next", methods=["POST"])
+@jwt_required()
 @swag_from({
     'tags': ['TNT'],
     'summary': 'Passer au prochain utilisateur dans la file vidéo',
@@ -806,6 +812,7 @@ def next_video_queue(session_id):
     return redirect(url_for("tnt.live_session_detail", session_id=session_id))
 
 @tnt_bp.route("/live-session/<int:session_id>/video-queue/kick", methods=["POST"])
+@jwt_required()
 @swag_from({
     'tags': ['TNT'],
     'summary': 'Couper l’utilisateur actif de la file vidéo',
