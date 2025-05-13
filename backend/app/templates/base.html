@@ -11,8 +11,8 @@
         <div class="container-fluid">
             <a class="navbar-brand" href="#">Téléconsultation</a>
             <div class="navbar-nav">
-                {% if session.user_id %}
-                    <a class="nav-link" href="{{ url_for('auth.home') }}">Tableau de bord</a>
+                {% if user %}
+                    <a class="nav-link" href="{{ url_for('auth.home_page') }}">Tableau de bord</a>
                     <a class="nav-link" href="{{ url_for('auth.logout') }}">Déconnexion</a>
                 {% else %}
                     <a class="nav-link" href="{{ url_for('auth.login') }}">Connexion</a>
@@ -25,5 +25,27 @@
         {% block content %}{% endblock %}
     </div>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Vérifier l'authentification via AJAX
+        async function checkAuth() {
+            try {
+                const response = await fetch('/api/auth/check-auth', {
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }
+                });
+                const data = await response.json();
+                if (!data.authenticated) {
+                    localStorage.removeItem('access_token');
+                    window.location.href = '{{ url_for("auth.login") }}';
+                }
+            } catch (error) {
+                console.error('Erreur check-auth:', error);
+                window.location.href = '{{ url_for("auth.login") }}';
+            }
+        }
+        // Vérifier l'authentification au chargement des pages protégées
+        if (window.location.pathname.includes('/live-session') || window.location.pathname.includes('/home_page')) {
+            checkAuth();
+        }
+    </script>
 </body>
 </html>

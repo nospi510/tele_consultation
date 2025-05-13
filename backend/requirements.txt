@@ -3,6 +3,7 @@ flask-sqlalchemy
 flask-migrate 
 flask-jwt-extended 
 flask-cors
+flask-session
 mysql-connector-python
 python-dotenv
 flasgger
