@@ -28,12 +28,12 @@ def create_app():
 
     # Configuration des sessions avec Redis
     
-    app.config['SESSION_TYPE'] = 'redis'
-    app.config['SESSION_REDIS'] = redis_client
-    app.config['SESSION_PERMANENT'] = True
-    app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=24)
+    #app.config['SESSION_TYPE'] = 'redis'
+    #app.config['SESSION_REDIS'] = redis_client
+    #app.config['SESSION_PERMANENT'] = True
+    #app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=24)
 
-    Session(app)  # ⚠️ Initialiser la gestion de session
+    #Session(app)  # ⚠️ Initialiser la gestion de session
 
 
     db.init_app(app)
