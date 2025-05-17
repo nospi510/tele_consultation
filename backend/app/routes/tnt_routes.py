@@ -39,6 +39,8 @@ tnt_bp = Blueprint("tnt", __name__)
         '400': {'description': 'ID de symptôme invalide'}
     }
 })
+
+
 def get_medical_advice():
     symptom_id = request.args.get("symptom_id", type=int)
     if not symptom_id:
@@ -396,31 +398,10 @@ def start_broadcast():
 
 @tnt_bp.route("/live-session/<int:session_id>/questions/enable", methods=["POST"])
 @jwt_required()
-@swag_from({
-    'tags': ['TNT'],
-    'summary': 'Activer les questions pour une session live',
-    'security': [{'BearerAuth': []}],
-    'parameters': [{
-        'name': 'session_id',
-        'in': 'path',
-        'required': True,
-        'type': 'integer'
-    }],
-    'responses': {
-        '200': {'description': 'Questions activées'},
-        '403': {'description': 'Seuls les docteurs peuvent activer les questions'},
-        '404': {'description': 'Session non trouvée'}
-    }
-})
 def enable_questions(session_id):
-    # Vérification pour requêtes API (JWT)
-    if request.content_type == "application/json":
-        user_id = get_jwt_identity()
-    else:
-        # Vérification pour formulaires HTML (session)
-        user_id = session.get("user_id")
-        if not user_id:
-            return redirect(url_for('auth.login'))
+    user_id = get_jwt_identity() if request.content_type == "application/json" else session.get("user_id")
+    if not user_id:
+        return redirect(url_for('auth.login'))
 
     user = User.query.get(user_id)
     live_session = LiveSession.query.get(session_id)
@@ -430,11 +411,12 @@ def enable_questions(session_id):
             return jsonify({"error": "Session non trouvée"}), 404
         return render_template("tnt/live_session_detail.html", error="Session non trouvée", user=user, session=live_session), 404
     
-    if user.role != "doctor" or user_id not in [b.id for b in live_session.broadcasters]:
+    # Autoriser si doctor OU diffuseur
+    if user.role != "doctor" and user_id not in [b.id for b in live_session.broadcasters]:
         logger.warning(f"Tentative non autorisée d'activer les questions par {user.email}")
         if request.content_type == "application/json":
-            return jsonify({"error": "Seuls les diffuseurs peuvent activer les questions"}), 403
-        return render_template("tnt/live_session_detail.html", error="Seuls les diffuseurs peuvent activer les questions", user=user, session=live_session), 403
+            return jsonify({"error": "Action réservée aux diffuseurs ou docteurs"}), 403
+        return render_template("tnt/live_session_detail.html", error="Action réservée aux diffuseurs ou docteurs", user=user, session=live_session), 403
 
     redis_client.set(f"live_session:{session_id}:questions_enabled", "true")
     socketio.emit('questions_enabled', {'session_id': session_id}, room=str(session_id), namespace='/live')
@@ -445,31 +427,10 @@ def enable_questions(session_id):
 
 @tnt_bp.route("/live-session/<int:session_id>/questions/disable", methods=["POST"])
 @jwt_required()
-@swag_from({
-    'tags': ['TNT'],
-    'summary': 'Désactiver les questions pour une session live',
-    'security': [{'BearerAuth': []}],
-    'parameters': [{
-        'name': 'session_id',
-        'in': 'path',
-        'required': True,
-        'type': 'integer'
-    }],
-    'responses': {
-        '200': {'description': 'Questions désactivées'},
-        '403': {'description': 'Seuls les docteurs peuvent désactiver les questions'},
-        '404': {'description': 'Session non trouvée'}
-    }
-})
 def disable_questions(session_id):
-    # Vérification pour requêtes API (JWT)
-    if request.content_type == "application/json":
-        user_id = get_jwt_identity()
-    else:
-        # Vérification pour formulaires HTML (session)
-        user_id = session.get("user_id")
-        if not user_id:
-            return redirect(url_for('auth.login'))
+    user_id = get_jwt_identity() if request.content_type == "application/json" else session.get("user_id")
+    if not user_id:
+        return redirect(url_for('auth.login'))
 
     user = User.query.get(user_id)
     live_session = LiveSession.query.get(session_id)
@@ -479,11 +440,12 @@ def disable_questions(session_id):
             return jsonify({"error": "Session non trouvée"}), 404
         return render_template("tnt/live_session_detail.html", error="Session non trouvée", user=user, session=live_session), 404
     
-    if user.role != "doctor" or user_id not in [b.id for b in live_session.broadcasters]:
+    # Autoriser si doctor OU diffuseur
+    if user.role != "doctor" and user_id not in [b.id for b in live_session.broadcasters]:
         logger.warning(f"Tentative non autorisée de désactiver les questions par {user.email}")
         if request.content_type == "application/json":
-            return jsonify({"error": "Seuls les diffuseurs peuvent désactiver les questions"}), 403
-        return render_template("tnt/live_session_detail.html", error="Seuls les diffuseurs peuvent désactiver les questions", user=user, session=live_session), 403
+            return jsonify({"error": "Action réservée aux diffuseurs ou docteurs"}), 403
+        return render_template("tnt/live_session_detail.html", error="Action réservée aux diffuseurs ou docteurs", user=user, session=live_session), 403
 
     redis_client.set(f"live_session:{session_id}:questions_enabled", "false")
     socketio.emit('questions_disabled', {'session_id': session_id}, room=str(session_id), namespace='/live')
@@ -491,6 +453,7 @@ def disable_questions(session_id):
     if request.content_type == "application/json":
         return jsonify({"message": "Questions désactivées"}), 200
     return redirect(url_for("tnt.live_session_detail", session_id=session_id))
+
 
 @tnt_bp.route("/live-session/<int:session_id>/questions", methods=["POST"])
 def send_question(session_id):
@@ -575,9 +538,9 @@ def answer_question(session_id, question_id):
     
     if not session or not question:
         return jsonify({"error": "Session ou question non trouvée"}), 404
-    if user.role != "doctor" or user_id not in [b.id for b in session.broadcasters]:
+    if user.role != "doctor" and user_id not in [b.id for b in session.broadcasters]:
         logger.warning(f"Tentative non autorisée de répondre par {user.email}")
-        return jsonify({"error": "Seuls les diffuseurs peuvent répondre"}), 403
+        return jsonify({"error": "Seuls les diffuseurs ou docteurs peuvent répondre"}), 403
 
     data = request.get_json()
     answer_text = data.get("answer_text")
@@ -761,7 +724,7 @@ def next_video_queue(session_id):
             return jsonify({"error": "Session non trouvée"}), 404
         return render_template("tnt/live_session_detail.html", error="Session non trouvée", user=user, session=live_session), 404
     
-    if user.role != "doctor" or user_id not in [b.id for b in live_session.broadcasters]:
+    if user.role != "doctor" and user_id not in [b.id for b in live_session.broadcasters]:
         logger.warning(f"Tentative non autorisée de passer au suivant par {user.email}")
         if request.content_type == "application/json":
             return jsonify({"error": "Seuls les diffuseurs peuvent passer au suivant"}), 403
@@ -847,7 +810,7 @@ def kick_video_queue(session_id):
             return jsonify({"error": "Session non trouvée"}), 404
         return render_template("tnt/live_session_detail.html", error="Session non trouvée", user=user, session=live_session), 404
     
-    if user.role != "doctor" or user_id not in [b.id for b in live_session.broadcasters]:
+    if user.role != "doctor" and user_id not in [b.id for b in live_session.broadcasters]:
         logger.warning(f"Tentative non autorisée de couper par {user.email}")
         if request.content_type == "application/json":
             return jsonify({"error": "Seuls les diffuseurs peuvent couper"}), 403
