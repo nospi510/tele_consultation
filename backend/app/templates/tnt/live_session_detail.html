@@ -1,562 +1,601 @@
 {% extends 'base.html' %}
 {% block title %}{{ session.title }}{% endblock %}
 {% block content %}
-<div class="row">
-    <div class="col-md-12">
-        <h2>{{ session.title }}</h2>
-        <p>Hôte: {{ session.host.fullname }}</p>
-        {% if error %}
-            <div class="alert alert-danger">{{ error }}</div>
-        {% endif %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&family=Montserrat:wght@600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/live_session_details.css') }}">
+</head>
+<body>
+    <div class="live-container">
+        <!-- En-tête -->
+        <header class="live-header">
+            <h1>{{ session.title }}</h1>
+            <p>Hôte : {{ session.host.fullname }}</p>
+            {% if error %}
+                <div class="alert alert-danger">{{ error }}</div>
+            {% endif %}
+        </header>
 
-        <!-- Diffusion vidéo -->
-        <div class="mb-4">
-            <h4>Diffusion en direct</h4>
+        <!-- Section vidéo -->
+        <section class="video-section">
+            <h2>Diffusion en direct</h2>
             <div id="video-container">
-                <video id="video-player" controls autoplay muted style="width: 100%;">
+                <video id="video-player" controls autoplay muted>
                     Votre navigateur ne supporte pas la vidéo.
                 </video>
-                <div id="no-stream-message" style="display: none; text-align: center; color: #666;">
+                <div id="no-stream-message">
                     <p>Aucune diffusion en cours pour le moment.</p>
                 </div>
             </div>
             {% if is_broadcaster %}
-                <div id="broadcaster-controls" class="mt-3">
+                <div id="broadcaster-controls">
                     <button id="start-broadcast" class="btn btn-primary">Démarrer la diffusion</button>
                     <button id="stop-broadcast" class="btn btn-danger" style="display: none;">Arrêter la diffusion</button>
                 </div>
             {% endif %}
-        </div>
+        </section>
 
-        <!-- Questions -->
-        <div class="mb-4">
-            <h4>Questions</h4>
-            <div id="questions-status">
-                {% if questions_enabled %}
-                    <p class="text-success">Les questions sont activées.</p>
-                    <div id="question-form">
-                        <div class="mb-3">
-                            <label for="question_text" class="form-label">Poser une question</label>
-                            <textarea class="form-control" id="question_text" name="question_text" rows="3"></textarea>
+        <!-- Contenu principal (questions + file/contrôles) -->
+        <main class="main-content">
+            <!-- Questions -->
+            <section class="questions-section">
+                <h2>Questions</h2>
+                <div id="questions-status">
+                    {% if questions_enabled %}
+                        <p class="status-enabled">Les questions sont activées.</p>
+                        <div id="question-form">
+                            <label for="question_text">Poser une question</label>
+                            <textarea id="question_text" name="question_text" rows="3"></textarea>
+                            <button id="submit-question" class="btn btn-primary">Envoyer</button>
                         </div>
-                        <button id="submit-question" class="btn btn-primary">Envoyer</button>
-                    </div>
-                {% else %}
-                    <p class="text-warning">Les questions sont désactivées.</p>
+                    {% else %}
+                        <p class="status-disabled">Les questions sont désactivées.</p>
+                    {% endif %}
+                </div>
+                <ul id="questions-list">
+                    {% for q in questions %}
+                        <li class="question-card" data-question-id="{{ q.id }}">
+                            <div class="question-content">
+                                <p><strong>{{ q.user }} :</strong> {{ q.question_text }}</p>
+                                {% if q.answer_text %}
+                                    <div class="answer-content">
+                                        <p><strong>Réponse :</strong> {{ q.answer_text }}</p>
+                                    </div>
+                                {% endif %}
+                                {% if user.role == 'doctor' and not q.answer_text %}
+                                    <div class="answer-form">
+                                        <textarea class="answer-text" rows="2" placeholder="Votre réponse..."></textarea>
+                                        <button class="btn btn-answer" onclick="answerQuestion({{ q.id }})">Répondre</button>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </li>
+                    {% endfor %}
+                </ul>
+            </section>
+
+            <!-- File d'attente et contrôles -->
+            <aside class="sidebar">
+                <!-- File d'attente -->
+                <section class="queue-section">
+                    <h2>File d'attente vidéo</h2>
+                    <ul id="video-queue-list">
+                        {% for entry in video_queue %}
+                            <li data-user-id="{{ entry.user_id }}">Position {{ entry.position }} : {{ entry.user }}</li>
+                        {% endfor %}
+                    </ul>
+                    <button id="join-queue" class="btn btn-primary">Rejoindre la file</button>
+                    <button id="leave-queue" class="btn btn-secondary">Quitter la file</button>
+                </section>
+
+                <!-- Contrôles diffuseur -->
+                {% if user.role == 'doctor' %}
+                    <section class="controls-section">
+                        <h2>Contrôles diffuseur</h2>
+                        <button id="enable-questions" class="btn btn-success">Activer les questions</button>
+                        <button id="disable-questions" class="btn btn-warning">Désactiver les questions</button>
+                        <button id="next-queue" class="btn btn-primary">Prochain utilisateur</button>
+                        <button id="kick-queue" class="btn btn-danger">Couper l'utilisateur actif</button>
+                    </section>
                 {% endif %}
-            </div>
-            <ul id="questions-list" class="list-group mt-3">
-                {% for q in questions %}
-                    <li class="list-group-item" data-question-id="{{ q.id }}">
-                        <p><strong>{{ q.user }}:</strong> {{ q.question_text }}</p>
-                        {% if q.answer_text %}
-                            <p><strong>Réponse:</strong> {{ q.answer_text }}</p>
-                        {% endif %}
-                    </li>
-                {% endfor %}
-            </ul>
-        </div>
-
-        <!-- File d'attente vidéo -->
-        <div class="mb-4">
-            <h4>File d'attente vidéo</h4>
-            <ul id="video-queue-list" class="list-group">
-                {% for entry in video_queue %}
-                    <li class="list-group-item" data-user-id="{{ entry.user_id }}">Position {{ entry.position }}: {{ entry.user }}</li>
-                {% endfor %}
-            </ul>
-            <button id="join-queue" class="btn btn-primary mt-3">Rejoindre la file</button>
-            <button id="leave-queue" class="btn btn-secondary mt-2">Quitter la file</button>
-        </div>
-
-        <!-- Contrôles pour les diffuseurs -->
-        {% if is_broadcaster %}
-            <div class="mb-4">
-                <h4>Contrôles diffuseur</h4>
-                <button id="enable-questions" class="btn btn-success">Activer les questions</button>
-                <button id="disable-questions" class="btn btn-warning">Désactiver les questions</button>
-                <button id="next-queue" class="btn btn-primary">Prochain utilisateur</button>
-                <button id="kick-queue" class="btn btn-danger">Couper l'utilisateur actif</button>
-            </div>
-        {% endif %}
+            </aside>
+        </main>
     </div>
-</div>
 
-<!-- SocketIO, hls.js et script JavaScript -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.5.4/socket.io.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/hls.js@1.4.12"></script>
-<script>
-    // Connexion à SocketIO
-    const socket = io('/live', { transports: ['websocket'] });
+    <!-- SocketIO, hls.js et script JavaScript -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.5.4/socket.io.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@1.4.12"></script>
+    <script>
+        // Connexion à SocketIO
+        const socket = io('/live', { transports: ['websocket'] });
 
-    // Rejoindre la session
-    socket.on('connect', () => {
-        console.log('Connecté à SocketIO');
-        socket.emit('join_session', {
-            session_id: {{ session.id }},
-            user_id: {{ user.id }}
+        // Rejoindre la session
+        socket.on('connect', () => {
+            console.log('Connecté à SocketIO');
+            socket.emit('join_session', {
+                session_id: {{ session.id }},
+                user_id: {{ user.id }}
+            });
         });
-    });
 
-    // Gérer les nouvelles questions
-    socket.on('new_question', (data) => {
-        console.log('Nouvelle question reçue:', data);
-        const questionsList = document.getElementById('questions-list');
-        const newQuestion = document.createElement('li');
-        newQuestion.className = 'list-group-item';
-        newQuestion.dataset.questionId = data.id;
-        newQuestion.innerHTML = `<p><strong>${data.user}:</strong> ${data.question_text}</p>`;
-        questionsList.appendChild(newQuestion);
-    });
+        // Gérer les nouvelles questions
+        socket.on('new_question', (data) => {
+            console.log('Nouvelle question reçue:', data);
+            const questionsList = document.getElementById('questions-list');
+            const newQuestion = document.createElement('li');
+            newQuestion.className = 'question-card';
+            newQuestion.dataset.questionId = data.id;
+            newQuestion.innerHTML = `
+                <div class="question-content">
+                    <p><strong>${data.user} :</strong> ${data.question_text}</p>
+                    {% if user.role == 'doctor' %}
+                        <div class="answer-form">
+                            <textarea class="answer-text" rows="2" placeholder="Votre réponse..."></textarea>
+                            <button class="btn btn-answer" onclick="answerQuestion(${data.id})">Répondre</button>
+                        </div>
+                    {% endif %}
+                </div>
+            `;
+            questionsList.appendChild(newQuestion);
+        });
 
-    // Gérer les réponses aux questions
-    socket.on('new_answer', (data) => {
-        console.log('Nouvelle réponse reçue:', data);
-        const questionItem = document.querySelector(`[data-question-id="${data.question_id}"]`);
-        if (questionItem) {
-            const answerPara = document.createElement('p');
-            answerPara.innerHTML = `<strong>Réponse:</strong> ${data.answer_text}`;
-            questionItem.appendChild(answerPara);
+        // Gérer les réponses aux questions
+        socket.on('new_answer', (data) => {
+            console.log('Nouvelle réponse reçue:', data);
+            const questionItem = document.querySelector(`[data-question-id="${data.question_id}"]`);
+            if (questionItem) {
+                const answerDiv = document.createElement('div');
+                answerDiv.className = 'answer-content';
+                answerDiv.innerHTML = `<p><strong>Réponse :</strong> ${data.answer_text}</p>`;
+                const questionContent = questionItem.querySelector('.question-content');
+                questionContent.appendChild(answerDiv);
+                const answerForm = questionItem.querySelector('.answer-form');
+                if (answerForm) answerForm.remove();
+            }
+        });
+
+        // Gérer les mises à jour de la file d'attente vidéo
+        socket.on('video_queue_update', (data) => {
+            console.log('Mise à jour file d’attente:', data);
+            const queueList = document.getElementById('video-queue-list');
+            if (data.action === 'join') {
+                const newEntry = document.createElement('li');
+                newEntry.dataset.userId = data.user_id;
+                newEntry.innerHTML = `Position ${data.position} : ${data.user}`;
+                queueList.appendChild(newEntry);
+            } else if (data.action === 'leave') {
+                const entry = document.querySelector(`[data-user-id="${data.user_id}"]`);
+                if (entry) entry.remove();
+            }
+            const entries = queueList.querySelectorAll('li');
+            entries.forEach((entry, index) => {
+                entry.innerHTML = `Position ${index + 1} : ${entry.textContent.split(': ')[1]}`;
+            });
+        });
+
+        // Fonction pour afficher le message "Aucune diffusion"
+        function showNoStreamMessage() {
+            console.log('Aucune diffusion active, affichage du message');
+            const videoPlayer = document.getElementById('video-player');
+            const noStreamMessage = document.getElementById('no-stream-message');
+            videoPlayer.style.display = 'none';
+            noStreamMessage.style.display = 'block';
+            videoPlayer.srcObject = null;
         }
-    });
 
-    // Gérer les mises à jour de la file d'attente vidéo
-    socket.on('video_queue_update', (data) => {
-        console.log('Mise à jour file d’attente:', data);
-        const queueList = document.getElementById('video-queue-list');
-        if (data.action === 'join') {
-            const newEntry = document.createElement('li');
-            newEntry.className = 'list-group-item';
-            newEntry.dataset.userId = data.user_id;
-            newEntry.innerHTML = `Position ${data.position}: ${data.user}`;
-            queueList.appendChild(newEntry);
-        } else if (data.action === 'leave') {
-            const entry = document.querySelector(`[data-user-id="${data.user_id}"]`);
-            if (entry) {
-                entry.remove();
+        // Fonction pour charger la vidéo HLS
+        function loadVideo(hlsUrl) {
+            console.log('Chargement vidéo HLS:', hlsUrl);
+            sessionStorage.setItem('currentHlsUrl', hlsUrl);
+            const videoPlayer = document.getElementById('video-player');
+            const noStreamMessage = document.getElementById('no-stream-message');
+            videoPlayer.innerHTML = '';
+            const source = document.createElement('source');
+            source.setAttribute('type', 'application/x-mpegURL');
+            source.setAttribute('src', hlsUrl);
+            videoPlayer.appendChild(source);
+
+            videoPlayer.style.display = 'block';
+            noStreamMessage.style.display = 'none';
+
+            if (Hls.isSupported() && !videoPlayer.canPlayType('application/vnd.apple.mpegurl')) {
+                console.log('Utilisation de hls.js pour charger le flux');
+                const hls = new Hls({
+                    enableWorker: true,
+                    maxBufferLength: 15,
+                    liveSyncDurationCount: 3,
+                    liveMaxLatencyDurationCount: 6,
+                    fragLoadingTimeOut: 10000,
+                    manifestLoadingTimeOut: 5000,
+                    levelLoadingTimeOut: 10000,
+                    capLevelToPlayerSize: true,
+                    progressive: true
+                });
+                hls.loadSource(hlsUrl);
+                hls.attachMedia(videoPlayer);
+                hls.on(Hls.Events.MANIFEST_PARSED, () => {
+                    const codecs = hls.levels[0]?.codecs || null;
+                    console.log('Manifeste HLS chargé, codecs:', codecs);
+                    if (!codecs || !codecs.includes('avc1')) {
+                        console.warn('Codec vidéo manquant ou non détecté');
+                        alert('Le flux vidéo n’est pas compatible avec ce navigateur. Essayez Chrome, Firefox ou Safari.');
+                        hls.destroy();
+                        showNoStreamMessage();
+                        return;
+                    }
+                    videoPlayer.play().catch(err => {
+                        console.error('Erreur lecture HLS:', err);
+                    });
+                });
+                hls.on(Hls.Events.ERROR, (event, data) => {
+                    console.error('Erreur HLS détaillée:', data);
+                    if (data.details === 'bufferStalledError') {
+                        console.log('Tentative de récupération après bufferStalledError');
+                        hls.startLoad();
+                    }
+                    if (data.fatal) {
+                        console.error('Erreur fatale HLS:', data);
+                        hls.destroy();
+                        alert('Erreur critique lors du chargement du flux vidéo: ' + (data.err?.message || 'Erreur inconnue'));
+                        showNoStreamMessage();
+                    }
+                });
+                hls.on(Hls.Events.LEVEL_LOADED, (event, data) => {
+                    console.log('Niveau HLS chargé:', data);
+                });
+                hls.on(Hls.Events.FRAG_LOADED, (event, data) => {
+                    console.log('Fragment HLS chargé:', data.frag.url);
+                });
+            } else if (videoPlayer.canPlayType('application/vnd.apple.mpegurl')) {
+                console.log('Utilisation du support HLS natif');
+                videoPlayer.load();
+                videoPlayer.play().catch(err => {
+                    console.error('Erreur lecture vidéo natif:', err);
+                    alert('Erreur lors de la lecture du flux vidéo. Essayez un autre navigateur.');
+                    showNoStreamMessage();
+                });
+            } else {
+                console.error('HLS non supporté par ce navigateur');
+                alert('Votre navigateur ne supporte pas HLS. Essayez Chrome, Firefox ou Safari.');
+                showNoStreamMessage();
             }
         }
-        const entries = queueList.querySelectorAll('li');
-        entries.forEach((entry, index) => {
-            entry.innerHTML = `Position ${index + 1}: ${entry.textContent.split(': ')[1]}`;
+
+        // Gérer le changement de flux vidéo
+        socket.on('video_stream_switch', (data) => {
+            console.log('Événement video_stream_switch reçu:', data);
+            loadVideo(data.hls_url);
         });
-    });
 
-    // Fonction pour afficher le message "Aucune diffusion"
-    function showNoStreamMessage() {
-        console.log('Aucune diffusion active, affichage du message');
-        const videoPlayer = document.getElementById('video-player');
-        const noStreamMessage = document.getElementById('no-stream-message');
-        videoPlayer.style.display = 'none';
-        noStreamMessage.style.display = 'block';
-    }
+        // Gérer l'événement start_broadcast
+        socket.on('start_broadcast', (data) => {
+            console.log('Événement start_broadcast reçu:', data);
+            loadVideo(data.hls_url);
+        });
 
-    // Fonction pour charger la vidéo HLS
-    function loadVideo(hlsUrl) {
-        console.log('Chargement vidéo HLS:', hlsUrl);
-        sessionStorage.setItem('currentHlsUrl', hlsUrl); // Stocker l'URL
-        const videoPlayer = document.getElementById('video-player');
-        const noStreamMessage = document.getElementById('no-stream-message');
-        videoPlayer.innerHTML = '';
-        const source = document.createElement('source');
-        source.setAttribute('type', 'application/x-mpegURL');
-        source.setAttribute('src', hlsUrl);
-        videoPlayer.appendChild(source);
-
-        videoPlayer.style.display = 'block';
-        noStreamMessage.style.display = 'none';
-
-        if (Hls.isSupported() && !videoPlayer.canPlayType('application/vnd.apple.mpegurl')) {
-            console.log('Utilisation de hls.js pour charger le flux');
-            const hls = new Hls({
-                enableWorker: true,
-                maxBufferLength: 15,
-                liveSyncDurationCount: 3,
-                liveMaxLatencyDurationCount: 6,
-                fragLoadingTimeOut: 10000,
-                manifestLoadingTimeOut: 5000,
-                levelLoadingTimeOut: 10000,
-                capLevelToPlayerSize: true,
-                progressive: true
-            });
-            hls.loadSource(hlsUrl);
-            hls.attachMedia(videoPlayer);
-            hls.on(Hls.Events.MANIFEST_PARSED, () => {
-                const codecs = hls.levels[0]?.codecs || null;
-                console.log('Manifeste HLS chargé, codecs:', codecs);
-                if (!codecs || !codecs.includes('avc1')) {
-                    console.warn('Codec vidéo manquant ou non détecté');
-                    alert('Le flux vidéo n’est pas compatible avec ce navigateur. Essayez Chrome, Firefox ou Safari.');
-                    hls.destroy();
-                    showNoStreamMessage();
-                    return;
-                }
-                videoPlayer.play().catch(err => {
-                    console.error('Erreur lecture HLS:', err);
-                });
-            });
-            hls.on(Hls.Events.ERROR, (event, data) => {
-                console.error('Erreur HLS détaillée:', data);
-                if (data.details === 'bufferStalledError') {
-                    console.log('Tentative de récupération après bufferStalledError');
-                    hls.startLoad();
-                }
-                if (data.fatal) {
-                    console.error('Erreur fatale HLS:', data);
-                    hls.destroy();
-                    alert('Erreur critique lors du chargement du flux vidéo: ' + (data.err?.message || 'Erreur inconnue'));
-                    showNoStreamMessage();
-                }
-            });
-            hls.on(Hls.Events.LEVEL_LOADED, (event, data) => {
-                console.log('Niveau HLS chargé:', data);
-            });
-            hls.on(Hls.Events.FRAG_LOADED, (event, data) => {
-                console.log('Fragment HLS chargé:', data.frag.url);
-            });
-        } else if (videoPlayer.canPlayType('application/vnd.apple.mpegurl')) {
-            console.log('Utilisation du support HLS natif');
-            videoPlayer.load();
-            videoPlayer.play().catch(err => {
-                console.error('Erreur lecture vidéo natif:', err);
-                alert('Erreur lors de la lecture du flux vidéo. Essayez un autre navigateur.');
-                showNoStreamMessage();
-            });
-        } else {
-            console.error('HLS non supporté par ce navigateur');
-            alert('Votre navigateur ne supporte pas HLS. Essayez Chrome, Firefox ou Safari.');
-            showNoStreamMessage();
-        }
-    }
-
-
-
-    
-    // Gérer le changement de flux vidéo
-    socket.on('video_stream_switch', (data) => {
-        console.log('Événement video_stream_switch reçu:', data);
-        loadVideo(data.hls_url);
-    });
-
-    // Gérer l'événement start_broadcast
-    socket.on('start_broadcast', (data) => {
-        console.log('Événement start_broadcast reçu:', data);
-        loadVideo(data.hls_url);
-    });
-
-    // Gérer l'activation des questions
-    socket.on('questions_enabled', (data) => {
-        console.log('Questions activées:', data);
-        const statusDiv = document.getElementById('questions-status');
-        statusDiv.innerHTML = `
-            <p class="text-success">Les questions sont activées.</p>
-            <div id="question-form">
-                <div class="mb-3">
-                    <label for="question_text" class="form-label">Poser une question</label>
-                    <textarea class="form-control" id="question_text" name="question_text" rows="3"></textarea>
+        // Gérer l'activation des questions
+        socket.on('questions_enabled', (data) => {
+            console.log('Questions activées:', data);
+            const statusDiv = document.getElementById('questions-status');
+            statusDiv.innerHTML = `
+                <p class="status-enabled">Les questions sont activées.</p>
+                <div id="question-form">
+                    <label for="question_text">Poser une question</label>
+                    <textarea id="question_text" name="question_text" rows="3"></textarea>
+                    <button id="submit-question" class="btn btn-primary">Envoyer</button>
                 </div>
-                <button id="submit-question" class="btn btn-primary">Envoyer</button>
-            </div>
-        `;
-        // Ré-attacher l'événement pour le bouton d'envoi
-        document.getElementById('submit-question').addEventListener('click', submitQuestion);
-    });
+            `;
+            document.getElementById('submit-question').addEventListener('click', submitQuestion);
+        });
 
-    // Gérer la désactivation des questions
-    socket.on('questions_disabled', (data) => {
-        console.log('Questions désactivées:', data);
-        const statusDiv = document.getElementById('questions-status');
-        statusDiv.innerHTML = `<p class="text-warning">Les questions sont désactivées.</p>`;
-    });
+        // Gérer la désactivation des questions
+        socket.on('questions_disabled', (data) => {
+            console.log('Questions désactivées:', data);
+            const statusDiv = document.getElementById('questions-status');
+            statusDiv.innerHTML = `<p class="status-disabled">Les questions sont désactivées.</p>`;
+        });
 
-    // Déconnexion
-    socket.on('disconnect', () => {
-        console.log('Déconnecté de SocketIO');
-    });
+        // Déconnexion
+        socket.on('disconnect', () => {
+            console.log('Déconnecté de SocketIO');
+        });
 
-    // Fonction pour envoyer des requêtes POST avec authentification
-    async function sendPostRequest(url, data) {
-        const token = localStorage.getItem('access_token');
-        if (!token) {
-            console.error('Jeton d’authentification manquant');
-            alert('Erreur: Veuillez vous reconnecter pour continuer.');
-            return false;
-        }
-        try {
-            const response = await fetch(url, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify(data)
-            });
-            if (!response.ok) {
-                const errorText = await response.text();
-                console.error('Erreur requête:', errorText);
-                alert(`Erreur: ${errorText}`);
+        // Fonction pour envoyer des requêtes POST avec authentification
+        async function sendPostRequest(url, data) {
+            const token = localStorage.getItem('access_token');
+            if (!token) {
+                console.error('Jeton d’authentification manquant');
+                alert('Erreur: Veuillez vous reconnecter pour continuer.');
                 return false;
             }
-            return true;
-        } catch (error) {
-            console.error('Erreur envoi requête:', error);
-            alert(`Erreur réseau: ${error.message}`);
-            return false;
-        }
-    }
-
-    // Gestion des actions sans actualisation
-    async function submitQuestion(event) {
-        event.preventDefault();
-        const questionText = document.getElementById('question_text').value;
-        if (!questionText.trim()) {
-            alert('Veuillez entrer une question.');
-            return;
-        }
-        const success = await sendPostRequest('{{ url_for("tnt.send_question", session_id=session.id) }}', {
-            question_text: questionText
-        });
-        if (success) {
-            document.getElementById('question_text').value = '';
-        }
-    }
-
-    async function joinQueue(event) {
-        event.preventDefault();
-        await sendPostRequest('{{ url_for("tnt.join_video_queue", session_id=session.id) }}', {});
-    }
-
-    async function leaveQueue(event) {
-        event.preventDefault();
-        await sendPostRequest('{{ url_for("tnt.leave_video_queue", session_id=session.id) }}', {});
-    }
-
-    async function enableQuestions(event) {
-        event.preventDefault();
-        await sendPostRequest('{{ url_for("tnt.enable_questions", session_id=session.id) }}', {});
-    }
-
-    async function disableQuestions(event) {
-        event.preventDefault();
-        await sendPostRequest('{{ url_for("tnt.disable_questions", session_id=session.id) }}', {});
-    }
-
-    async function nextQueue(event) {
-        event.preventDefault();
-        await sendPostRequest('{{ url_for("tnt.next_video_queue", session_id=session.id) }}', {});
-    }
-
-    async function kickQueue(event) {
-        event.preventDefault();
-        await sendPostRequest('{{ url_for("tnt.kick_video_queue", session_id=session.id) }}', {});
-    }
-
-    // Attacher les événements aux boutons
-    const submitQuestionButton = document.getElementById('submit-question');
-    if (submitQuestionButton) submitQuestionButton.addEventListener('click', submitQuestion);
-
-    document.getElementById('join-queue').addEventListener('click', joinQueue);
-    document.getElementById('leave-queue').addEventListener('click', leaveQueue);
-
-    {% if is_broadcaster %}
-        document.getElementById('enable-questions').addEventListener('click', enableQuestions);
-        document.getElementById('disable-questions').addEventListener('click', disableQuestions);
-        document.getElementById('next-queue').addEventListener('click', nextQueue);
-        document.getElementById('kick-queue').addEventListener('click', kickQueue);
-
-        let peerConnection = null;
-        let localStream = null;
-
-        const startBroadcastButton = document.getElementById('start-broadcast');
-        const stopBroadcastButton = document.getElementById('stop-broadcast');
-
-        startBroadcastButton.addEventListener('click', async () => {
             try {
-                console.log('Étape 1: Demande d’accès caméra/micro');
-                localStream = await navigator.mediaDevices.getUserMedia({
-                    video: true,
-                    audio: true
-                });
-                console.log('Étape 2: Flux caméra/micro obtenu:', {
-                    videoTracks: localStream.getVideoTracks().length,
-                    audioTracks: localStream.getAudioTracks().length,
-                    tracks: localStream.getTracks()
-                });
-
-                console.log('Étape 3: Ajout aperçu local');
-                const previewVideo = document.createElement('video');
-                previewVideo.muted = true;
-                previewVideo.style.width = '200px';
-                previewVideo.style.position = 'absolute';
-                previewVideo.style.top = '10px';
-                previewVideo.style.right = '10px';
-                document.body.appendChild(previewVideo);
-                previewVideo.srcObject = localStream;
-                previewVideo.play().catch(err => console.error('Erreur aperçu vidéo:', err));
-
-                console.log('Étape 4: Configuration WebRTC');
-                const configuration = {
-                    iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
-                };
-                peerConnection = new RTCPeerConnection(configuration);
-
-                console.log('Étape 5: Ajout des pistes');
-                localStream.getTracks().forEach(track => {
-                    peerConnection.addTrack(track, localStream);
-                });
-
-                peerConnection.onicecandidate = (event) => {
-                    console.log('Étape 6: ICE candidate:', event.candidate || 'Fin des candidats');
-                };
-
-                peerConnection.onconnectionstatechange = () => {
-                    console.log('Étape 7: État connexion WebRTC:', peerConnection.connectionState);
-                    if (peerConnection.connectionState === 'connected') {
-                        console.log('WebRTC connecté avec succès');
-                    }
-                };
-
-                console.log('Étape 8: Création offre SDP');
-                const offer = await peerConnection.createOffer();
-                await peerConnection.setLocalDescription(offer);
-                console.log('Étape 9: Offre SDP:', offer.sdp);
-
-                const endpoint = 'http://localhost:1985/rtc/v1/publish/';
-                console.log('Étape 10: Envoi requête POST à:', endpoint);
-                const response = await fetch(endpoint, {
+                const response = await fetch(url, {
                     method: 'POST',
-                    headers: { 
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        sdp: offer.sdp,
-                        streamurl: `/live/{{ session.id }}_{{ user.id }}`
-                    })
-                });
-
-                console.log('Étape 11: Réponse reçue, statut:', response.status);
-                if (!response.ok) {
-                    const errorText = await response.text();
-                    console.error('Erreur SRS:', errorText);
-                    throw new Error(`Erreur SRS HTTP ${response.status}: ${errorText}`);
-                }
-
-                let data;
-                try {
-                    data = await response.json();
-                    console.log('Étape 12: Réponse SRS:', data);
-                } catch (e) {
-                    const errorText = await response.text();
-                    console.error('Réponse brute non-JSON:', errorText);
-                    throw new Error(`Erreur parsing JSON: ${e.message}`);
-                }
-
-                if (data.code !== 0) {
-                    console.error('Échec publication WebRTC:', data);
-                    throw new Error(`Échec publication: ${data.error || 'Erreur inconnue'}`);
-                }
-
-                console.log('Étape 13: Définition description distante');
-                await peerConnection.setRemoteDescription({
-                    type: 'answer',
-                    sdp: data.sdp
-                });
-
-                console.log('Étape 14: Attente établissement flux');
-                await new Promise(resolve => setTimeout(resolve, 2000));
-
-                const hlsUrl = `http://localhost:8080/hls/live/{{ session.id }}_{{ user.id }}.m3u8`;
-                console.log('Étape 15: URL HLS:', hlsUrl);
-
-                const token = localStorage.getItem('access_token');
-                console.log('Étape 16: Jeton:', token ? 'Présent' : 'Manquant');
-                if (!token) {
-                    throw new Error('Jeton d’authentification manquant');
-                }
-
-                console.log('Étape 17: Envoi stockage URL HLS');
-                const storeResponse = await fetch('{{ url_for("tnt.store_broadcast_url") }}', {
-                    method: 'POST',
-                    headers: { 
+                    headers: {
                         'Content-Type': 'application/json',
                         'Authorization': `Bearer ${token}`
                     },
-                    body: JSON.stringify({
-                        session_id: {{ session.id }},
-                        hls_url: hlsUrl
-                    })
+                    body: JSON.stringify(data)
                 });
-
-                console.log('Étape 18: Réponse stockage, statut:', storeResponse.status);
-                if (!storeResponse.ok) {
-                    const errorText = await storeResponse.text();
-                    console.error('Erreur stockage URL HLS:', errorText);
-                    throw new Error(`Échec stockage URL HLS: ${storeResponse.status} ${errorText}`);
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    console.error('Erreur requête:', errorData);
+                    alert(`Erreur: ${errorData.error || 'Action non autorisée'}`);
+                    return false;
                 }
-
-                console.log('Étape 19: Émission événement SocketIO');
-                socket.emit('start_broadcast', {
-                    session_id: {{ session.id }},
-                    user_id: {{ user.id }},
-                    hls_url: hlsUrl
-                });
-
-                console.log('Étape 20: Mise à jour interface');
-                startBroadcastButton.style.display = 'none';
-                stopBroadcastButton.style.display = 'inline-block';
-                console.log('Diffusion démarrée');
+                return true;
             } catch (error) {
-                console.error('Erreur démarrage diffusion:', error);
-                alert(`Impossible de démarrer la diffusion: ${error.message}`);
+                console.error('Erreur envoi requête:', error);
+                alert(`Erreur réseau: ${error.message}`);
+                return false;
+            }
+        }
+
+        // Gestion des actions sans actualisation
+        async function submitQuestion(event) {
+            event.preventDefault();
+            const questionText = document.getElementById('question_text').value;
+            if (!questionText.trim()) {
+                alert('Veuillez entrer une question.');
+                return;
+            }
+            const success = await sendPostRequest('{{ url_for("tnt.send_question", session_id=session.id) }}', {
+                question_text: questionText
+            });
+            if (success) {
+                document.getElementById('question_text').value = '';
+            }
+        }
+
+        async function answerQuestion(questionId) {
+            const questionItem = document.querySelector(`[data-question-id="${questionId}"]`);
+            const answerText = questionItem.querySelector('.answer-text').value;
+            if (!answerText.trim()) {
+                alert('Veuillez entrer une réponse.');
+                return;
+            }
+            const success = await sendPostRequest(`{{ url_for('tnt.answer_question', session_id=session.id, question_id=0) }}`.replace('0', questionId), {
+                answer_text: answerText
+            });
+            if (success) {
+                questionItem.querySelector('.answer-text').value = '';
+            }
+        }
+
+        async function joinQueue(event) {
+            event.preventDefault();
+            await sendPostRequest('{{ url_for("tnt.join_video_queue", session_id=session.id) }}', {});
+        }
+
+        async function leaveQueue(event) {
+            event.preventDefault();
+            await sendPostRequest('{{ url_for("tnt.leave_video_queue", session_id=session.id) }}', {});
+        }
+
+        async function enableQuestions(event) {
+            event.preventDefault();
+            await sendPostRequest('{{ url_for("tnt.enable_questions", session_id=session.id) }}', {});
+        }
+
+        async function disableQuestions(event) {
+            event.preventDefault();
+            await sendPostRequest('{{ url_for("tnt.disable_questions", session_id=session.id) }}', {});
+        }
+
+        async function nextQueue(event) {
+            event.preventDefault();
+            await sendPostRequest('{{ url_for("tnt.next_video_queue", session_id=session.id) }}', {});
+        }
+
+        async function kickQueue(event) {
+            event.preventDefault();
+            await sendPostRequest('{{ url_for("tnt.kick_video_queue", session_id=session.id) }}', {});
+        }
+
+        // Attacher les événements aux boutons
+        const submitQuestionButton = document.getElementById('submit-question');
+        if (submitQuestionButton) submitQuestionButton.addEventListener('click', submitQuestion);
+
+        document.getElementById('join-queue').addEventListener('click', joinQueue);
+        document.getElementById('leave-queue').addEventListener('click', leaveQueue);
+
+        {% if user.role == 'doctor' %}
+            document.getElementById('enable-questions').addEventListener('click', enableQuestions);
+            document.getElementById('disable-questions').addEventListener('click', disableQuestions);
+            document.getElementById('next-queue').addEventListener('click', nextQueue);
+            document.getElementById('kick-queue').addEventListener('click', kickQueue);
+        {% endif %}
+
+        {% if is_broadcaster %}
+            let peerConnection = null;
+            let localStream = null;
+
+            const startBroadcastButton = document.getElementById('start-broadcast');
+            const stopBroadcastButton = document.getElementById('stop-broadcast');
+
+            startBroadcastButton.addEventListener('click', async () => {
+                try {
+                    console.log('Étape 1: Demande d’accès caméra/micro');
+                    localStream = await navigator.mediaDevices.getUserMedia({
+                        video: true,
+                        audio: true
+                    });
+                    console.log('Étape 2: Flux caméra/micro obtenu:', {
+                        videoTracks: localStream.getVideoTracks().length,
+                        audioTracks: localStream.getAudioTracks().length,
+                        tracks: localStream.getTracks()
+                    });
+
+                    console.log('Étape 3: Affichage flux local dans video-player');
+                    const videoPlayer = document.getElementById('video-player');
+                    videoPlayer.srcObject = localStream;
+                    videoPlayer.play().catch(err => console.error('Erreur lecture flux local:', err));
+
+                    console.log('Étape 4: Configuration WebRTC');
+                    const configuration = {
+                        iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+                    };
+                    peerConnection = new RTCPeerConnection(configuration);
+
+                    console.log('Étape 5: Ajout des pistes');
+                    localStream.getTracks().forEach(track => {
+                        peerConnection.addTrack(track, localStream);
+                    });
+
+                    peerConnection.onicecandidate = (event) => {
+                        console.log('Étape 6: ICE candidate:', event.candidate || 'Fin des candidats');
+                    };
+
+                    peerConnection.onconnectionstatechange = () => {
+                        console.log('Étape 7: État connexion WebRTC:', peerConnection.connectionState);
+                        if (peerConnection.connectionState === 'connected') {
+                            console.log('WebRTC connecté avec succès');
+                        }
+                    };
+
+                    console.log('Étape 8: Création offre SDP');
+                    const offer = await peerConnection.createOffer();
+                    await peerConnection.setLocalDescription(offer);
+                    console.log('Étape 9: Offre SDP:', offer.sdp);
+
+                    const endpoint = 'http://localhost:1985/rtc/v1/publish/';
+                    console.log('Étape 10: Envoi requête POST à:', endpoint);
+                    const response = await fetch(endpoint, {
+                        method: 'POST',
+                        headers: { 
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            sdp: offer.sdp,
+                            streamurl: `/live/{{ session.id }}_{{ user.id }}`
+                        })
+                    });
+
+                    console.log('Étape 11: Réponse reçue, statut:', response.status);
+                    if (!response.ok) {
+                        const errorText = await response.text();
+                        console.error('Erreur SRS:', errorText);
+                        throw new Error(`Erreur SRS HTTP ${response.status}: ${errorText}`);
+                    }
+
+                    let data;
+                    try {
+                        data = await response.json();
+                        console.log('Étape 12: Réponse SRS:', data);
+                    } catch (e) {
+                        const errorText = await response.text();
+                        console.error('Réponse brute non-JSON:', errorText);
+                        throw new Error(`Erreur parsing JSON: ${e.message}`);
+                    }
+
+                    if (data.code !== 0) {
+                        console.error('Échec publication WebRTC:', data);
+                        throw new Error(`Échec publication: ${data.error || 'Erreur inconnue'}`);
+                    }
+
+                    console.log('Étape 13: Définition description distante');
+                    await peerConnection.setRemoteDescription({
+                        type: 'answer',
+                        sdp: data.sdp
+                    });
+
+                    console.log('Étape 14: Attente établissement flux');
+                    await new Promise(resolve => setTimeout(resolve, 2000));
+
+                    const hlsUrl = `http://localhost:8080/hls/live/{{ session.id }}_{{ user.id }}.m3u8`;
+                    console.log('Étape 15: URL HLS:', hlsUrl);
+
+                    const token = localStorage.getItem('access_token');
+                    console.log('Étape 16: Jeton:', token ? 'Présent' : 'Manquant');
+                    if (!token) {
+                        throw new Error('Jeton d’authentification manquant');
+                    }
+
+                    console.log('Étape 17: Envoi stockage URL HLS');
+                    const storeResponse = await fetch('{{ url_for("tnt.store_broadcast_url") }}', {
+                        method: 'POST',
+                        headers: { 
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                        },
+                        body: JSON.stringify({
+                            session_id: {{ session.id }},
+                            hls_url: hlsUrl
+                        })
+                    });
+
+                    console.log('Étape 18: Réponse stockage, statut:', storeResponse.status);
+                    if (!storeResponse.ok) {
+                        const errorText = await storeResponse.text();
+                        console.error('Erreur stockage URL HLS:', errorText);
+                        throw new Error(`Échec stockage URL HLS: ${storeResponse.status} ${errorText}`);
+                    }
+
+                    console.log('Étape 19: Émission événement SocketIO');
+                    socket.emit('start_broadcast', {
+                        session_id: {{ session.id }},
+                        user_id: {{ user.id }},
+                        hls_url: hlsUrl
+                    });
+
+                    console.log('Étape 20: Mise à jour interface');
+                    startBroadcastButton.style.display = 'none';
+                    stopBroadcastButton.style.display = 'inline-block';
+                    console.log('Diffusion démarrée');
+                } catch (error) {
+                    console.error('Erreur démarrage diffusion:', error);
+                    alert(`Impossible de démarrer la diffusion: ${error.message}`);
+                    if (localStream) {
+                        localStream.getTracks().forEach(track => track.stop());
+                    }
+                    if (peerConnection) {
+                        peerConnection.close();
+                    }
+                    localStream = null;
+                    peerConnection = null;
+                    showNoStreamMessage();
+                }
+            });
+
+            stopBroadcastButton.addEventListener('click', async () => {
+                console.log('Arrêt diffusion');
                 if (localStream) {
                     localStream.getTracks().forEach(track => track.stop());
                 }
                 if (peerConnection) {
                     peerConnection.close();
                 }
-                const previewVideo = document.querySelector('video[style*="position: absolute"]');
-                if (previewVideo) previewVideo.remove();
                 localStream = null;
                 peerConnection = null;
-            }
-        });
 
-        stopBroadcastButton.addEventListener('click', async () => {
-            console.log('Arrêt diffusion');
-            if (localStream) {
-                localStream.getTracks().forEach(track => track.stop());
-            }
-            if (peerConnection) {
-                peerConnection.close();
-            }
-            localStream = null;
-            peerConnection = null;
+                startBroadcastButton.style.display = 'inline-block';
+                stopBroadcastButton.style.display = 'none';
+                sessionStorage.removeItem('currentHlsUrl');
+                showNoStreamMessage();
+                console.log('Diffusion arrêtée');
+            });
+        {% endif %}
 
-            const previewVideo = document.querySelector('video[style*="position: absolute"]');
-            if (previewVideo) previewVideo.remove();
-
-            startBroadcastButton.style.display = 'inline-block';
-            stopBroadcastButton.style.display = 'none';
-            sessionStorage.removeItem('currentHlsUrl');
+        // Initialisation au chargement de la page
+        const hlsUrls = {{ hls_urls | tojson }};
+        console.log('hls_urls reçu:', hlsUrls);
+        const savedHlsUrl = sessionStorage.getItem('currentHlsUrl');
+        if (savedHlsUrl) {
+            console.log('Chargement depuis sessionStorage:', savedHlsUrl);
+            loadVideo(savedHlsUrl);
+        } else if (hlsUrls && hlsUrls.length > 0 && hlsUrls[0].hls_url) {
+            console.log('Chargement depuis hls_urls:', hlsUrls[0].hls_url);
+            loadVideo(hlsUrls[0].hls_url);
+        } else {
+            console.log('Aucun flux HLS disponible');
             showNoStreamMessage();
-            console.log('Diffusion arrêtée');
-        });
-    {% endif %}
-
-    // Initialisation au chargement de la page
-    const hlsUrls = {{ hls_urls | tojson }};
-    console.log('hls_urls reçu:', hlsUrls);
-    const savedHlsUrl = sessionStorage.getItem('currentHlsUrl');
-    if (savedHlsUrl) {
-        console.log('Chargement depuis sessionStorage:', savedHlsUrl);
-        loadVideo(savedHlsUrl);
-    } else if (hlsUrls && hlsUrls.length > 0 && hlsUrls[0].hls_url) {
-        console.log('Chargement depuis hls_urls:', hlsUrls[0].hls_url);
-        loadVideo(hlsUrls[0].hls_url);
-    } else {
-        console.log('Aucun flux HLS disponible');
-        showNoStreamMessage();
-    }
-</script>
+        }
+    </script>
+</body>
+</html>
 {% endblock %}

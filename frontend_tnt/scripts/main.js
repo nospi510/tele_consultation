@@ -1,9 +1,7 @@
 let userData = null;
-
-// URL de la playlist M3U
 const m3uUrl = 'https://raw.githubusercontent.com/Free-TV/IPTV/master/playlist.m3u8';
-
-
+let socket = null;
+let currentSessionId = null;
 
 function initApp() {
     try {
@@ -20,9 +18,72 @@ function initApp() {
         loadUserInfo(token);
         showAuthenticatedUI();
         loadDoctors();
+        initSocketIO(token);
     }
 
     initNavigation();
+}
+
+function initSocketIO(token) {
+    socket = io('http://localhost:5001/live', {
+        transports: ['websocket'],
+        auth: { token },
+        reconnection: true,
+        reconnectionAttempts: 5,
+        reconnectionDelay: 1000
+    });
+
+    socket.on('connect', () => {
+        console.log('Connecté à SocketIO');
+        if (currentSessionId && userData?.id) {
+            socket.emit('join_session', { session_id: currentSessionId, user_id: userData.id });
+            console.log('Rejoint session:', currentSessionId);
+        }
+    });
+
+    socket.on('questions_enabled', (data) => {
+        console.log('Événement questions_enabled reçu:', data);
+        if (data.session_id == currentSessionId) {
+            console.log('Activation des questions pour session:', data.session_id);
+            document.getElementById('question-form').style.display = 'block';
+            document.getElementById('questions-status').innerHTML = '<p class="text-success">Les questions sont activées.</p>';
+        } else {
+            console.log('Événement ignoré, session_id ne correspond pas:', data.session_id, currentSessionId);
+        }
+    });
+
+    socket.on('questions_disabled', (data) => {
+        console.log('Événement questions_disabled reçu:', data);
+        if (data.session_id == currentSessionId) {
+            console.log('Désactivation des questions pour session:', data.session_id);
+            document.getElementById('question-form').style.display = 'none';
+            document.getElementById('questions-status').innerHTML = '<p class="text-muted">Les questions sont désactivées.</p>';
+        } else {
+            console.log('Événement ignoré, session_id ne correspond pas:', data.session_id, currentSessionId);
+        }
+    });
+
+    socket.on('new_question', (data) => {
+        console.log('Nouvelle question reçue:', data);
+        if (data.session_id == currentSessionId) {
+            addQuestionToList(data);
+        }
+    });
+
+    socket.on('new_answer', (data) => {
+        console.log('Nouvelle réponse reçue:', data);
+        if (data.session_id == currentSessionId) {
+            updateQuestionWithAnswer(data);
+        }
+    });
+
+    socket.on('disconnect', () => {
+        console.log('Déconnecté de SocketIO');
+    });
+
+    socket.on('connect_error', (error) => {
+        console.error('Erreur de connexion SocketIO:', error);
+    });
 }
 
 function showAuthenticatedUI() {
@@ -88,6 +149,7 @@ function submitLogin() {
         localStorage.setItem("token", data.access_token);
         loadUserInfo(data.access_token);
         loadDoctors();
+        initSocketIO(data.access_token);
         alert("Connexion réussie !");
         hideLogin();
         showAuthenticatedUI();
@@ -100,6 +162,7 @@ function submitLogin() {
 function logout() {
     localStorage.removeItem("token");
     userData = null;
+    if (socket) socket.disconnect();
     alert("Déconnexion réussie.");
     window.location.reload();
 }
@@ -395,18 +458,6 @@ function updateVideoSource(url) {
     }
 }
 
-function hideAllRightPanels() {
-    document.getElementById("welcome-message").style.display = "none";
-    document.getElementById("login-form").style.display = "none";
-    document.getElementById("consultation-form").style.display = "none";
-    document.getElementById("history-view").style.display = "none";
-    document.getElementById("tips-view").style.display = "none";
-    document.getElementById("appointment-form").style.display = "none";
-    document.getElementById("upcoming-appointments").style.display = "none";
-    document.getElementById("channel-selection").style.display = "none";
-    document.getElementById("live-session").style.display = "none";
-}
-
 function showLiveSession() {
     hideAllRightPanels();
     document.getElementById("live-session").style.display = "block";
@@ -439,22 +490,32 @@ function showLiveSession() {
 
 function hideLiveSession() {
     document.getElementById("live-session").style.display = "none";
+    document.getElementById("question-form").style.display = "none";
+    document.getElementById("questions-status").innerHTML = '<p class="text-muted">Les questions sont désactivées.</p>';
+    document.getElementById("questions-list").innerHTML = "";
+    if (socket && currentSessionId) {
+        socket.emit('leave_session', { session_id: currentSessionId, user_id: userData?.id });
+        currentSessionId = null;
+    }
     document.getElementById("welcome-message").style.display = "block";
 }
 
 function playLiveSession() {
     const sessionId = document.getElementById("session-select").value;
     if (!sessionId) {
+        console.log('Aucune session sélectionnée');
         alert("Veuillez sélectionner une session.");
         return;
     }
 
+    currentSessionId = sessionId;
+    console.log('currentSessionId défini:', currentSessionId);
     fetch(`http://localhost:5001/api/tnt/live-session/${sessionId}/url`, {
         method: "GET",
         headers: { "Authorization": "Bearer " + localStorage.getItem("token") }
     })
     .then(response => {
-        if (!response.ok) throw new Error("Aucune diffusion disponible");
+        if (!response.ok) throw new Error(`Erreur HTTP ${response.status}: Aucune diffusion disponible`);
         return response.json();
     })
     .then(data => {
@@ -464,12 +525,155 @@ function playLiveSession() {
         const hlsUrl = data[0].hls_url;
         console.log("HLS URL sélectionnée:", hlsUrl);
         updateVideoSource(hlsUrl);
-        hideLiveSession();
+        if (socket && socket.connected && userData?.id) {
+            socket.emit('join_session', {
+                session_id: sessionId,
+                user_id: userData.id
+            });
+            console.log('Émis join_session pour session:', sessionId);
+        } else {
+            console.warn('SocketIO non connecté ou userData manquant:', { socketConnected: socket?.connected, userId: userData?.id });
+        }
+        loadQuestions(sessionId);
     })
     .catch(error => {
         console.error("Erreur récupération URL:", error);
         alert("Erreur : " + error.message);
     });
+}
+
+
+function loadQuestions(sessionId) {
+    fetch(`http://localhost:5001/api/tnt/live-session/${sessionId}/questions`, {
+        method: "GET",
+        headers: { "Authorization": "Bearer " + localStorage.getItem("token") }
+    })
+    .then(response => {
+        if (!response.ok) throw new Error("Erreur chargement questions");
+        return response.json();
+    })
+    .then(data => {
+        const questionsList = document.getElementById("questions-list");
+        questionsList.innerHTML = "";
+        data.forEach(q => addQuestionToList(q));
+        checkQuestionsStatus(sessionId);
+    })
+    .catch(error => {
+        console.error("Erreur chargement questions:", error);
+    });
+}
+
+function checkQuestionsStatus(sessionId) {
+    console.log('Vérification statut questions pour session:', sessionId);
+    fetch(`http://localhost:5001/api/tnt/live-session/${sessionId}`, {
+        method: "GET",
+        headers: { "Authorization": "Bearer " + localStorage.getItem("token") }
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`Erreur HTTP ${response.status}: ${response.statusText}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        console.log('Statut session reçu:', data);
+        if (data.questions_enabled) {
+            console.log('Questions activées pour session:', sessionId);
+            document.getElementById('question-form').style.display = 'block';
+            document.getElementById('questions-status').innerHTML = '<p class="text-success">Les questions sont activées.</p>';
+        } else {
+            console.log('Questions désactivées pour session:', sessionId);
+            document.getElementById('question-form').style.display = 'none';
+            document.getElementById('questions-status').innerHTML = '<p class="text-muted">Les questions sont désactivées.</p>';
+        }
+    })
+    .catch(error => {
+        console.error('Erreur lors de la vérification du statut des questions:', error);
+        document.getElementById('question-form').style.display = 'none';
+        document.getElementById('questions-status').innerHTML = '<p class="text-muted">Les questions sont désactivées (erreur).</p>';
+    });
+}
+
+function submitQuestion() {
+    const questionText = document.getElementById("question-input").value;
+    if (!questionText.trim()) {
+        console.log('Champ de question vide');
+        alert("Veuillez entrer une question.");
+        return;
+    }
+
+    if (!currentSessionId) {
+        console.error('currentSessionId non défini');
+        alert("Erreur : Aucune session sélectionnée. Veuillez choisir une session.");
+        return;
+    }
+
+    const token = localStorage.getItem("token");
+    if (!token) {
+        console.error('Token non trouvé dans localStorage');
+        alert("Erreur : Vous devez être connecté pour poser une question.");
+        return;
+    }
+
+    console.log('Envoi de la question:', { sessionId: currentSessionId, questionText });
+    fetch(`http://localhost:5001/api/tnt/live-session/${currentSessionId}/questions`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({ question_text: questionText })
+    })
+    .then(response => {
+        console.log('Réponse de la requête POST:', response);
+        if (!response.ok) {
+            throw new Error(`Erreur HTTP ${response.status}: Échec de l'envoi de la question`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        console.log('Question envoyée avec succès:', data);
+        document.getElementById("question-input").value = "";
+    })
+    .catch(error => {
+        console.error('Erreur lors de l’envoi de la question:', error);
+        alert(`Erreur lors de l'envoi de la question : ${error.message}`);
+    });
+}
+function addQuestionToList(data) {
+    const questionsList = document.getElementById("questions-list");
+    const card = document.createElement("div");
+    card.className = "question-card card shadow-sm glass-effect mb-2";
+    card.dataset.questionId = data.id;
+    card.innerHTML = `
+        <div class="card-body">
+            <p><strong>${data.user} :</strong> ${data.question_text}</p>
+            ${data.answer_text ? `<p><strong>Réponse :</strong> ${data.answer_text}</p>` : ''}
+        </div>
+    `;
+    questionsList.appendChild(card);
+}
+
+function updateQuestionWithAnswer(data) {
+    const questionCard = document.querySelector(`.question-card[data-question-id="${data.question_id}"]`);
+    if (questionCard) {
+        const cardBody = questionCard.querySelector('.card-body');
+        const answerP = document.createElement("p");
+        answerP.innerHTML = `<strong>Réponse :</strong> ${data.answer_text}`;
+        cardBody.appendChild(answerP);
+    }
+}
+
+function hideAllRightPanels() {
+    document.getElementById("welcome-message").style.display = "none";
+    document.getElementById("login-form").style.display = "none";
+    document.getElementById("consultation-form").style.display = "none";
+    document.getElementById("history-view").style.display = "none";
+    document.getElementById("tips-view").style.display = "none";
+    document.getElementById("appointment-form").style.display = "none";
+    document.getElementById("upcoming-appointments").style.display = "none";
+    document.getElementById("channel-selection").style.display = "none";
+    document.getElementById("live-session").style.display = "none";
 }
 
 function initNavigation() {

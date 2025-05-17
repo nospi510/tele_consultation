@@ -11,6 +11,8 @@
     <link rel="stylesheet" href="assets/styles.css" />
     <!-- hls.js pour les flux M3U -->
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <!-- SocketIO pour la synchronisation en temps réel -->
+    <script src="https://cdn.jsdelivr.net/npm/socket.io-client@4.5.4/dist/socket.io.min.js"></script>
     <!-- Bootstrap JS (pour les composants interactifs comme modals) -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
     <!-- Custom JS -->
@@ -179,6 +181,17 @@
                             <button class="btn btn-success w-100 mb-2" onclick="playLiveSession()" tabindex="0">
                                 <i class="bi bi-play-circle me-2"></i>Regarder
                             </button>
+                            <div id="question-form" class="mb-3" style="display:none;">
+                                <label for="question-input" class="form-label">Poser une question :</label>
+                                <textarea id="question-input" class="form-control" placeholder="Votre question..." tabindex="0"></textarea>
+                                <button class="btn btn-primary w-100 mt-2" onclick="submitQuestion()" tabindex="0">
+                                    <i class="bi bi-send me-2"></i>Envoyer
+                                </button>
+                            </div>
+                            <div id="questions-status" class="mb-3">
+                                <p class="text-muted">Les questions sont désactivées.</p>
+                            </div>
+                            <div id="questions-list" class="mb-3"></div>
                             <button class="btn btn-secondary w-100" onclick="hideLiveSession()" tabindex="0">
                                 <i class="bi bi-arrow-left me-2"></i>Retour
                             </button>
