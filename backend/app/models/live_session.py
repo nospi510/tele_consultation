@@ -1,14 +1,14 @@
 from app import db
 from datetime import datetime
 
-# Table associative pour les diffuseurs (déjà existante)
+# Table associative pour les diffuseurs 
 session_broadcasters = db.Table(
     'session_broadcasters',
     db.Column('session_id', db.Integer, db.ForeignKey('live_session.id'), primary_key=True),
     db.Column('user_id', db.Integer, db.ForeignKey('user.id'), primary_key=True)
 )
 
-# Table associative pour les participants (déjà existante)
+# Table associative pour les participants 
 session_participants = db.Table(
     'session_participants',
     db.Column('session_id', db.Integer, db.ForeignKey('live_session.id'), primary_key=True),
@@ -23,6 +23,7 @@ class LiveSession(db.Model):
     host_doctor_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     is_active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    quiz_enabled = db.Column(db.Boolean, default=False)
 
     # Relations
     host = db.relationship('User', foreign_keys=[host_doctor_id])
@@ -49,6 +50,40 @@ class LiveQuestion(db.Model):
 
     def __repr__(self):
         return f'<LiveQuestion {self.id} - Session {self.session_id}>'
+
+class LiveQuiz(db.Model):
+    __tablename__ = 'live_quiz'
+
+    id = db.Column(db.Integer, primary_key=True)
+    session_id = db.Column(db.Integer, db.ForeignKey('live_session.id'), nullable=False)
+    question = db.Column(db.Text, nullable=False)
+    options = db.Column(db.JSON, nullable=False)
+    correct_option = db.Column(db.Integer, nullable=False)
+    duration = db.Column(db.Integer, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    expires_at = db.Column(db.DateTime, nullable=True)
+
+    # Relations
+    session = db.relationship('LiveSession', backref=db.backref('quizzes', lazy=True))
+
+    def __repr__(self):
+        return f'<LiveQuiz {self.id} - Session {self.session_id}>'
+
+class QuizAnswer(db.Model):
+    __tablename__ = 'quiz_answer'
+
+    id = db.Column(db.Integer, primary_key=True)
+    quiz_id = db.Column(db.Integer, db.ForeignKey('live_quiz.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    selected_option = db.Column(db.Integer, nullable=False)
+    submitted_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    # Relations
+    quiz = db.relationship('LiveQuiz', backref=db.backref('answers', lazy=True))
+    user = db.relationship('User', backref=db.backref('quiz_answers', lazy=True))
+
+    def __repr__(self):
+        return f'<QuizAnswer {self.id} - Quiz {self.quiz_id} - User {self.user_id}>'
 
 class VideoQueue(db.Model):
     __tablename__ = 'video_queue'

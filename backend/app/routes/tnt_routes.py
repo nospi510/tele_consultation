@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 import subprocess
 from flask import Blueprint, request, jsonify, Response, render_template, redirect, url_for, session
 from flasgger import swag_from
@@ -7,7 +7,7 @@ import requests
 import re
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from app import db, socketio
-from app.models.live_session import LiveSession, session_broadcasters, session_participants, LiveQuestion, VideoQueue
+from app.models.live_session import LiveSession, session_broadcasters, session_participants, LiveQuestion, VideoQueue, LiveQuiz, QuizAnswer
 from app.models.user import User
 from flask_socketio import emit, join_room, leave_room
 import logging
@@ -281,6 +281,15 @@ def live_session_detail(session_id):
         'position': q.position
     } for q in video_queue]
 
+    quizzes = LiveQuiz.query.filter_by(session_id=session_id).order_by(LiveQuiz.created_at.desc()).all()
+    quiz_data = [{
+        'quiz_id': quiz.id,
+        'question': quiz.question,
+        'options': quiz.options,
+        'duration': quiz.duration,
+        'created_at': quiz.created_at.isoformat()
+    } for quiz in quizzes]
+
     questions_enabled = redis_client.get(f"live_session:{session_id}:questions_enabled") == b"true"
     is_broadcaster = user_id in [b.id for b in live_session.broadcasters]
 
@@ -289,6 +298,7 @@ def live_session_detail(session_id):
                           hls_urls=hls_urls, 
                           questions=question_data, 
                           video_queue=queue_data, 
+                          quizzes=quiz_data,  # Ajout des quiz
                           questions_enabled=questions_enabled, 
                           is_broadcaster=is_broadcaster, 
                           user=user)
@@ -846,6 +856,206 @@ def update_video_queue_positions(session_id):
     for index, entry in enumerate(entries, 1):
         entry.position = index
     db.session.commit()
+
+
+@tnt_bp.route('/live-session/<int:session_id>/quiz/create', methods=['POST'])
+@jwt_required()
+def create_quiz(session_id):
+    try:
+        user_id = get_jwt_identity()
+        logging.info(f"Tentative de création quiz pour session {session_id} par user_id: {user_id}")
+        if not user_id:
+            logging.error("Aucune identité utilisateur dans le JWT")
+            return jsonify({'error': 'Identité utilisateur invalide'}), 401
+        user = User.query.get(user_id)
+        if not user:
+            logging.error(f"Utilisateur non trouvé pour user_id: {user_id}")
+            return jsonify({'error': 'Utilisateur non trouvé'}), 404
+        if user.role != 'doctor':
+            logging.warning(f"Tentative non autorisée de créer un quiz par {user.email}")
+            return jsonify({'error': 'Accès non autorisé'}), 403
+        session = LiveSession.query.get(session_id)
+        if not session:
+            logging.error(f"Session non trouvée: session_id={session_id}")
+            return jsonify({'error': 'Session non trouvée'}), 404
+        data = request.get_json()
+        logging.debug(f"Données reçues: {data}")
+        question = data.get('question')
+        options = data.get('options')
+        correct_option = data.get('correct_option')
+        duration = data.get('duration', 30)
+        if not question or not options or len(options) != 4 or correct_option not in [0, 1, 2, 3] or duration < 10:
+            logging.error(f"Données invalides: {data}")
+            return jsonify({'error': 'Données invalides'}), 422
+        quiz = LiveQuiz(
+            session_id=session_id,
+            question=question,
+            options=options,
+            correct_option=correct_option,
+            duration=duration,
+            created_at=datetime.utcnow()
+        )
+        db.session.add(quiz)
+        db.session.commit()
+        socketio.emit('new_quiz', {
+            'quiz_id': quiz.id,
+            'session_id': session_id,
+            'question': quiz.question
+        }, room=str(user_id), namespace='/live')
+        logging.info(f"Quiz créé pour la session {session_id} par {user.email}, quiz_id: {quiz.id}")
+        return jsonify({'message': 'Quiz créé', 'quiz_id': quiz.id}), 201
+    except Exception as e:
+        logging.error(f"Erreur dans create_quiz (session_id={session_id}): {str(e)}", exc_info=True)
+        return jsonify({'error': 'Erreur serveur interne'}), 500
+
+@tnt_bp.route('/live-session/<int:session_id>/quiz/enable', methods=['POST'])
+@jwt_required()
+def enable_quiz(session_id):
+    try:
+        user_id = get_jwt_identity()
+        logging.debug(f"JWT identity: {user_id}")
+        if not user_id:
+            logging.error("Aucune identité utilisateur dans le JWT")
+            return jsonify({'error': 'Identité utilisateur invalide'}), 401
+        user = User.query.get(user_id)
+        if not user:
+            logging.error(f"Utilisateur non trouvé pour user_id: {user_id}")
+            return jsonify({'error': 'Utilisateur non trouvé'}), 404
+        if user.role != 'doctor':
+            logging.warning(f"Tentative non autorisée d'activer le quiz par {user.email}")
+            return jsonify({'error': 'Accès non autorisé'}), 403
+        session = LiveSession.query.get(session_id)
+        if not session:
+            logging.error(f"Session non trouvée: session_id={session_id}")
+            return jsonify({'error': 'Session non trouvée'}), 404
+        session.quiz_enabled = True
+        quiz_id = request.args.get('quiz_id', type=int)
+        if not quiz_id:
+            logging.error("Aucun quiz_id fourni")
+            return jsonify({'error': 'Quiz ID requis'}), 400
+        quiz = LiveQuiz.query.get(quiz_id)
+        if not quiz or quiz.session_id != session_id:
+            logging.error(f"Quiz non trouvé ou invalide: quiz_id={quiz_id}, session_id={session_id}")
+            return jsonify({'error': 'Quiz non trouvé'}), 404
+        duration = quiz.duration
+        expires_at = datetime.utcnow() + timedelta(seconds=duration)
+        quiz.expires_at = expires_at
+        db.session.commit()
+        socketio.emit('quiz_enabled', {
+            'quiz_id': quiz.id,
+            'session_id': session_id,
+            'question': quiz.question,
+            'options': quiz.options,
+            'duration': duration,
+            'expires_at': expires_at.isoformat()
+        }, room=str(session_id), namespace='/live')
+        logging.info(f"Quiz {quiz_id} activé pour la session {session_id} par {user.email}")
+        return jsonify({'message': 'Quiz activé'}), 200
+    except Exception as e:
+        logging.error(f"Erreur dans enable_quiz (session_id={session_id}): {str(e)}", exc_info=True)
+        return jsonify({'error': 'Erreur serveur interne'}), 500
+
+@tnt_bp.route('/live-session/<int:session_id>/quiz/disable', methods=['POST'])
+@jwt_required()
+def disable_quiz(session_id):
+    try:
+        user_id = get_jwt_identity()
+        logging.debug(f"JWT identity: {user_id}")
+        if not user_id:
+            logging.error("Aucune identité utilisateur dans le JWT")
+            return jsonify({'error': 'Identité utilisateur invalide'}), 401
+        user = User.query.get(user_id)
+        if not user:
+            logging.error(f"Utilisateur non trouvé pour user_id: {user_id}")
+            return jsonify({'error': 'Utilisateur non trouvé'}), 404
+        if user.role != 'doctor':
+            logging.warning(f"Tentative non autorisée de désactiver le quiz par {user.email}")
+            return jsonify({'error': 'Accès non autorisé'}), 403
+        session = LiveSession.query.get(session_id)
+        if not session:
+            logging.error(f"Session non trouvée: session_id={session_id}")
+            return jsonify({'error': 'Session non trouvée'}), 404
+        session.quiz_enabled = False
+        db.session.commit()
+        socketio.emit('quiz_disabled', {'session_id': session_id}, room=str(session_id), namespace='/live')
+        logging.info(f"Quiz désactivé pour la session {session_id} par {user.email}")
+        return jsonify({'message': 'Quiz désactivé'}), 200
+    except Exception as e:
+        logging.error(f"Erreur dans disable_quiz (session_id={session_id}): {str(e)}", exc_info=True)
+        return jsonify({'error': 'Erreur serveur interne'}), 500
+
+@tnt_bp.route('/live-session/<int:session_id>/quizzes', methods=['GET'])
+def get_quizzes(session_id):
+    try:
+        user_id = session.get("user_id")
+        logging.info(f"Tentative de récupération des quiz pour session {session_id} par user_id: {user_id}")
+        if not user_id:
+            logging.error("Aucune identité utilisateur dans la session")
+            return jsonify({'error': 'Identité utilisateur invalide'}), 401
+        user = User.query.get(user_id)
+        if not user:
+            logging.error(f"Utilisateur non trouvé pour user_id: {user_id}")
+            return jsonify({'error': 'Utilisateur non trouvé'}), 404
+        if user.role != 'doctor':
+            logging.warning(f"Tentative non autorisée de récupérer les quiz par {user.email}")
+            return jsonify({'error': 'Accès non autorisé'}), 403
+        session = LiveSession.query.get(session_id)
+        if not session:
+            logging.error(f"Session non trouvée: session_id={session_id}")
+            return jsonify({'error': 'Session non trouvée'}), 404
+        quizzes = LiveQuiz.query.filter_by(session_id=session_id).order_by(LiveQuiz.created_at.desc()).all()
+        quiz_list = [{
+            'quiz_id': quiz.id,
+            'question': quiz.question,
+            'options': quiz.options,
+            'duration': quiz.duration,
+            'created_at': quiz.created_at.isoformat()
+        } for quiz in quizzes]
+        logging.info(f"Liste des quiz récupérée pour la session {session_id} par {user.email}: {len(quiz_list)} quiz")
+        return jsonify(quiz_list), 200
+    except Exception as e:
+        logging.error(f"Erreur dans get_quizzes (session_id={session_id}): {str(e)}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
+
+@tnt_bp.route('/live-session/<int:session_id>/quiz/delete/<int:quiz_id>', methods=['POST'])
+@jwt_required()
+def delete_quiz(session_id, quiz_id):
+    try:
+        user_id = get_jwt_identity()
+        logging.info(f"Tentative de suppression du quiz {quiz_id} pour session {session_id} par user_id: {user_id}")
+        if not user_id:
+            logging.error("Aucune identité utilisateur dans le JWT")
+            return jsonify({'error': 'Identité utilisateur invalide'}), 401
+        user = User.query.get(user_id)
+        if not user:
+            logging.error(f"Utilisateur non trouvé pour user_id: {user_id}")
+            return jsonify({'error': 'Utilisateur non trouvé'}), 404
+        if user.role != 'doctor':
+            logging.warning(f"Tentative non autorisée de supprimer un quiz par {user.email}")
+            return jsonify({'error': 'Accès non autorisé'}), 403
+        session = LiveSession.query.get(session_id)
+        if not session:
+            logging.error(f"Session non trouvée: session_id={session_id}")
+            return jsonify({'error': 'Session non trouvée'}), 404
+        quiz = LiveQuiz.query.get(quiz_id)
+        if not quiz or quiz.session_id != session_id:
+            logging.error(f"Quiz non trouvé ou invalide: quiz_id={quiz_id}, session_id={session_id}")
+            return jsonify({'error': 'Quiz non trouvé'}), 404
+        db.session.delete(quiz)
+        db.session.commit()
+        socketio.emit('quiz_deleted', {
+            'quiz_id': quiz_id,
+            'session_id': session_id
+        }, room=str(user_id), namespace='/live')
+        logging.info(f"Quiz {quiz_id} supprimé pour la session {session_id} par {user.email}")
+        return jsonify({'message': 'Quiz supprimé'}), 200
+    except Exception as e:
+        logging.error(f"Erreur dans delete_quiz (session_id={session_id}, quiz_id={quiz_id}): {str(e)}", exc_info=True)
+        return jsonify({'error': 'Erreur serveur interne'}), 500
+
+
+# WebSocket
+
 
 @socketio.on('connect', namespace='/live')
 def handle_connect():

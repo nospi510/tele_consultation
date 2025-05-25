@@ -36,6 +36,37 @@ def register():
     return redirect(url_for("auth.login"))
 
 @auth_bp.route("/login", methods=["GET", "POST"])
+@swag_from({
+    'tags': ['Auth'],
+    'summary': 'Connexion utilisateur',
+    'parameters': [{
+        'name': 'body',
+        'in': 'body',
+        'required': True,
+        'schema': {
+            'type': 'object',
+            'properties': {
+                'email': {'type': 'string', 'example': 'nick@visiotech.me'},
+                'password': {'type': 'string', 'example': 'passer'}
+            }
+        }
+    }],
+    'responses': {
+        '200': {
+            'description': 'Connexion réussie',
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'access_token': {'type': 'string'},
+                    'user_role': {'type': 'string'}  # Ajout dans la documentation
+                }
+            }
+        },
+        '401': {
+            'description': 'Identifiants invalides'
+        }
+    }
+})
 def login():
     if request.method == "GET":
         return render_template("auth/login.html")
