@@ -36,20 +36,24 @@ body {
   background: var(--background-gradient);
   color: #1f2937;
   min-height: 100vh;
-  overflow: hidden;
-  display: flex;
+  display: block;
   justify-content: center;
   align-items: center;
   padding: 10px;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  margin: 0;
+  overflow: auto; 
 }
 
 /* Conteneur principal */
 #app-container {
   max-width: 1280px;
   width: 100%;
-  height: 720px;
+  height: 100vh; 
   margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box; 
 }
 
 /* Glass effect */
@@ -63,6 +67,7 @@ body {
 /* Panels */
 #left-panel, #video-panel, #right-panel {
   animation: fadeInUp 0.6s ease-out;
+  height: 100%; /* Ajouté pour occuper la hauteur disponible */
 }
 
 /* Menu principal */
@@ -122,6 +127,8 @@ body {
   aspect-ratio: 16 / 9;
   background: rgba(0, 0, 0, 0.8);
   transition: var(--transition);
+  max-height: 405px; /* Ajouté pour limiter à 16:9 dans 720px */
+  width: 100%;
 }
 
 #video-player:hover {
@@ -132,6 +139,12 @@ body {
 #right-panel .card-title {
   font-size: 1.5rem;
   color: var(--accent-color);
+}
+
+#right-panel .card-body {
+  max-height: 680px; /* Ajouté pour limiter la hauteur (720px - marges) */
+  overflow-y: auto; /* Ajouté pour défilement si contenu trop long */
+  padding: 15px; /* Réduit pour plus d’espace */
 }
 
 #welcome-message {
@@ -205,22 +218,56 @@ body {
 }
 
 /* Cartes */
-.consultation-card, .appointment-card, .question-card {
+.consultation-card, .appointment-card, .question-card, .quiz-card {
   border-radius: var(--border-radius);
   transition: var(--transition);
+  max-width: 100%; /* Ajouté pour éviter débordement */
 }
 
-.consultation-card:hover, .appointment-card:hover, .question-card:hover {
+.consultation-card:hover, .appointment-card:hover, .question-card:hover, .quiz-card:hover {
   transform: scale(1.02);
 }
 
-.consultation-card p, .appointment-card p, .question-card p {
+.consultation-card p, .appointment-card p, .question-card p, .quiz-card p {
   font-size: 0.9rem;
   margin-bottom: 6px;
 }
 
-.consultation-card p strong, .appointment-card p strong, .question-card p strong {
+.consultation-card p strong, .appointment-card p strong, .question-card p strong, .quiz-card p strong {
   color: var(--accent-color);
+}
+
+/* Quiz */
+#quiz-content, #quiz-results {
+  max-height: 300px; /* Ajouté pour limiter la hauteur du quiz */
+  overflow-y: auto; /* Ajouté pour défilement si contenu trop long */
+}
+
+#quiz-status p {
+  font-size: 0.95rem;
+  margin-bottom: 10px;
+}
+
+.quiz-card {
+  background: rgba(51, 51, 51, 0.8); /* Conserver style sombre */
+  color: #fff;
+  border: 1px solid #555;
+}
+
+.quiz-card h5 {
+  font-size: 1.2rem; /* Réduit pour économiser espace */
+  margin-bottom: 10px;
+}
+
+#quiz-timer {
+  font-size: 0.9rem;
+  color: #0f0;
+}
+
+.quiz-option {
+  font-size: 0.85rem; /* Réduit pour compacité */
+  padding: 8px; /* Réduit pour plus d’options visibles */
+  margin-bottom: 8px;
 }
 
 /* Questions */
@@ -307,6 +354,11 @@ body {
 
   #video-player {
       max-width: 100%;
+      max-height: 360px; /* Ajusté pour responsive */
+  }
+
+  #right-panel .card-body {
+      max-height: 600px; /* Ajusté pour petits écrans */
   }
 }
 
@@ -328,17 +380,21 @@ body {
       padding: 8px;
   }
 
-  .consultation-card, .appointment-card, .question-card {
+  .consultation-card, .appointment-card, .question-card, .quiz-card {
       padding: 10px;
   }
 
-  .consultation-card p, .appointment-card p, .question-card p {
+  .consultation-card p, .appointment-card p, .question-card p, .quiz-card p {
       font-size: 0.85rem;
   }
 
-  #channel-list .list-group-item, #questions-list .question-card {
+  #channel-list .list-group-item, #questions-list .question-card, #quiz-content .quiz-card {
       font-size: 0.9rem;
       padding: 10px;
+  }
+
+  #quiz-content, #quiz-results {
+      max-height: 250px; /* Ajusté pour petits écrans */
   }
 }
 

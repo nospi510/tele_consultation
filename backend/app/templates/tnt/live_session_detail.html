@@ -8,6 +8,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&family=Montserrat:wght@600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/live_session_details.css') }}">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.5.4/socket.io.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@1.4.12"></script>
 </head>
 <body>
     <div class="live-container">
@@ -39,8 +41,8 @@
             {% endif %}
         </section>
 
-        <!-- Contenu principal (questions + file/contrôles) -->
-        <main class="main-content">
+            <!-- Contenu principal (questions + quiz + file/contrôles) -->
+        
             <!-- Questions -->
             <section class="questions-section">
                 <h2>Questions</h2>
@@ -78,6 +80,97 @@
                 </ul>
             </section>
 
+
+            <!-- Quiz -->
+            <div class="container mt-4">
+                <h2>Gestion des Quiz</h2>
+                <div id="quiz-section">
+                    {% if user.role == 'doctor' %}
+                        <div class="mb-3">
+                            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createQuizModal">Créer un quiz</button>
+                        </div>
+                    {% endif %}
+                    <div id="quiz-status"><p class="text-muted">Aucun quiz activé.</p></div>
+                    {% if user.role == 'doctor' %}
+                        <div id="quiz-list" class="mb-3">
+                            {% if quizzes %}
+                                <h4>Quiz créés</h4>
+                                <ul class="list-group">
+                                    {% for quiz in quizzes %}
+                                        <li class="list-group-item glass-effect d-flex justify-content-between align-items-center">
+                                            <span>{{ quiz.question }}</span>
+                                            <div>
+                                                <button class="btn btn-success btn-sm me-2" onclick="activateQuiz({{ quiz.quiz_id }})">Activer</button>
+                                                <button class="btn btn-danger btn-sm" onclick="deleteQuiz({{ quiz.quiz_id }})">Supprimer</button>
+                                            </div>
+                                        </li>
+                                    {% endfor %}
+                                </ul>
+                            {% else %}
+                                <p class="text-muted">Aucun quiz créé.</p>
+                            {% endif %}
+                        </div>
+                    {% endif %}
+                    <div id="quiz-content" style="display: none;"></div>
+                    <div id="quiz-results" style="display: none;"></div>
+                    {% if user.role == 'doctor' %}
+                        <button id="disable-quiz" class="btn btn-warning" style="display: none;" onclick="disableQuiz()">Désactiver le quiz</button>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Modal pour créer un quiz -->
+            <div class="modal fade" id="createQuizModal" tabindex="-1" aria-labelledby="createQuizModalLabel" aria-hidden="true">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="createQuizModalLabel">Créer un quiz</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <form id="create-quiz-form">
+                                <div class="mb-3">
+                                    <label for="quiz-question" class="form-label">Question</label>
+                                    <input type="text" class="form-control" id="quiz-question" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="option-0" class="form-label">Option 1</label>
+                                    <input type="text" class="form-control" id="option-0" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="option-1" class="form-label">Option 2</label>
+                                    <input type="text" class="form-control" id="option-1" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="option-2" class="form-label">Option 3</label>
+                                    <input type="text" class="form-control" id="option-2" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="option-3" class="form-label">Option 4</label>
+                                    <input type="text" class="form-control" id="option-3" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="correct-option" class="form-label">Bonne réponse</label>
+                                    <select class="form-control" id="correct-option" required>
+                                        <option value="" disabled selected>Choisir la bonne réponse</option>
+                                        <option value="0">Option 1</option>
+                                        <option value="1">Option 2</option>
+                                        <option value="2">Option 3</option>
+                                        <option value="3">Option 4</option>
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="quiz-duration" class="form-label">Durée (secondes)</label>
+                                    <input type="number" class="form-control" id="quiz-duration" value="30" min="10" required>
+                                </div>
+                                <button type="button" class="btn btn-success" onclick="createQuiz()">Créer</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            
             <!-- File d'attente et contrôles -->
             <aside class="sidebar">
                 <!-- File d'attente -->
@@ -103,15 +196,66 @@
                     </section>
                 {% endif %}
             </aside>
-        </main>
+       
     </div>
 
-    <!-- SocketIO, hls.js et script JavaScript -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.5.4/socket.io.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/hls.js@1.4.12"></script>
+
+
+    <!-- Modal pour créer un quiz -->
+    {% if user.role == 'doctor' %}
+    <div class="modal fade" id="createQuizModal" tabindex="-1" aria-labelledby="createQuizModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content glass-effect">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="createQuizModalLabel">Créer un Quiz</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="create-quiz-form">
+                        <div class="mb-3">
+                            <label for="quiz-question" class="form-label">Question</label>
+                            <textarea id="quiz-question" class="form-control" placeholder="Entrez la question" required></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label for="option-0" class="form-label">Option 1</label>
+                            <input type="text" id="option-0" class="form-control" placeholder="Option 1" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="option-1" class="form-label">Option 2</label>
+                            <input type="text" id="option-1" class="form-control" placeholder="Option 2" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="option-2" class="form-label">Option 3</label>
+                            <input type="text" id="option-2" class="form-control" placeholder="Option 3" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="option-3" class="form-label">Option 4</label>
+                            <input type="text" id="option-3" class="form-control" placeholder="Option 4" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="correct-option" class="form-label">Bonne réponse</label>
+                            <select id="correct-option" class="form-select" required>
+                                <option value="0">Option 1</option>
+                                <option value="1">Option 2</option>
+                                <option value="2">Option 3</option>
+                                <option value="3">Option 4</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="quiz-duration" class="form-label">Durée (secondes)</label>
+                            <input type="number" id="quiz-duration" class="form-control" value="30" min="10" required>
+                        </div>
+                        <button type="submit" class="btn btn-success w-100">Créer</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
     <script>
         // Connexion à SocketIO
-        const socket = io('/live', { transports: ['websocket'] });
+        const socket = io('/live', { transports: ['websocket'], auth: { token: localStorage.getItem('access_token') } });
 
         // Rejoindre la session
         socket.on('connect', () => {
@@ -176,6 +320,66 @@
                 entry.innerHTML = `Position ${index + 1} : ${entry.textContent.split(': ')[1]}`;
             });
         });
+
+        // Gérer l'activation des questions
+        socket.on('questions_enabled', (data) => {
+            console.log('Questions activées:', data);
+            const statusDiv = document.getElementById('questions-status');
+            statusDiv.innerHTML = `
+                <p class="status-enabled">Les questions sont activées.</p>
+                <div id="question-form">
+                    <label for="question_text">Poser une question</label>
+                    <textarea id="question_text" name="question_text" rows="3"></textarea>
+                    <button id="submit-question" class="btn btn-primary">Envoyer</button>
+                </div>
+            `;
+            document.getElementById('submit-question').addEventListener('click', submitQuestion);
+        });
+
+        // Gérer la désactivation des questions
+        socket.on('questions_disabled', (data) => {
+            console.log('Questions désactivées:', data);
+            const statusDiv = document.getElementById('questions-status');
+            statusDiv.innerHTML = `<p class="status-disabled">Les questions sont désactivées.</p>`;
+        });
+
+        socket.on('new_quiz', (data) => {
+                console.log('Nouveau quiz reçu:', data);
+                if (data.session_id === {{ session.id }} && '{{ user.role }}' === 'doctor') {
+                    // Recharger la page pour mettre à jour la liste des quiz
+                    window.location.reload();
+                }
+            });
+
+            socket.on('quiz_enabled', (data) => {
+                console.log('Quiz activé pour session:', data.session_id);
+                if (data.session_id === {{ session.id }}) {
+                    document.getElementById('quiz-status').innerHTML = '<p class="status-enabled">Le quiz est activé.</p>';
+                    displayQuiz(data);
+                    {% if user.role == 'doctor' %}
+                        document.getElementById('disable-quiz').style.display = 'block';
+                    {% endif %}
+                }
+            });
+
+            socket.on('quiz_disabled', (data) => {
+                console.log('Quiz désactivé pour session:', data.session_id);
+                if (data.session_id === {{ session.id }}) {
+                    document.getElementById('quiz-status').innerHTML = '<p class="status-disabled">Le quiz est désactivé.</p>';
+                    document.getElementById('quiz-content').style.display = 'none';
+                    document.getElementById('quiz-results').style.display = 'none';
+                    {% if user.role == 'doctor' %}
+                        document.getElementById('disable-quiz').style.display = 'none';
+                    {% endif %}
+                }
+            });
+
+            socket.on('quiz_deleted', (data) => {
+                console.log('Quiz supprimé:', data);
+                if (data.session_id === {{ session.id }} && '{{ user.role }}' === 'doctor') {
+                    window.location.reload();
+                }
+            });
 
         // Fonction pour afficher le message "Aucune diffusion"
         function showNoStreamMessage() {
@@ -277,28 +481,6 @@
             loadVideo(data.hls_url);
         });
 
-        // Gérer l'activation des questions
-        socket.on('questions_enabled', (data) => {
-            console.log('Questions activées:', data);
-            const statusDiv = document.getElementById('questions-status');
-            statusDiv.innerHTML = `
-                <p class="status-enabled">Les questions sont activées.</p>
-                <div id="question-form">
-                    <label for="question_text">Poser une question</label>
-                    <textarea id="question_text" name="question_text" rows="3"></textarea>
-                    <button id="submit-question" class="btn btn-primary">Envoyer</button>
-                </div>
-            `;
-            document.getElementById('submit-question').addEventListener('click', submitQuestion);
-        });
-
-        // Gérer la désactivation des questions
-        socket.on('questions_disabled', (data) => {
-            console.log('Questions désactivées:', data);
-            const statusDiv = document.getElementById('questions-status');
-            statusDiv.innerHTML = `<p class="status-disabled">Les questions sont désactivées.</p>`;
-        });
-
         // Déconnexion
         socket.on('disconnect', () => {
             console.log('Déconnecté de SocketIO');
@@ -306,35 +488,42 @@
 
         // Fonction pour envoyer des requêtes POST avec authentification
         async function sendPostRequest(url, data) {
-            const token = localStorage.getItem('access_token');
-            if (!token) {
-                console.error('Jeton d’authentification manquant');
-                alert('Erreur: Veuillez vous reconnecter pour continuer.');
-                return false;
-            }
-            try {
-                const response = await fetch(url, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`
-                    },
-                    body: JSON.stringify(data)
-                });
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    console.error('Erreur requête:', errorData);
-                    alert(`Erreur: ${errorData.error || 'Action non autorisée'}`);
-                    return false;
-                }
-                return true;
-            } catch (error) {
-                console.error('Erreur envoi requête:', error);
-                alert(`Erreur réseau: ${error.message}`);
-                return false;
-            }
+        const token = localStorage.getItem('access_token'); 
+        if (!token) {
+            console.error('Jeton d’authentification manquant');
+            alert('Erreur: Veuillez vous reconnecter pour continuer.');
+            window.location.href = '/api/auth/login';
+            return false;
         }
-
+        try {
+            console.log('Envoi POST:', { url, data });
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify(data)
+            });
+            console.log('Réponse sendPostRequest:', { status: response.status, ok: response.ok });
+            if (response.status === 401) {
+                alert('Session expirée. Veuillez vous reconnecter.');
+                window.location.href = '/api/auth/login';
+                return false;
+            }
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error('Erreur sendPostRequest:', errorText);
+                throw new Error(`Erreur HTTP ${response.status}: ${errorText}`);
+            }
+            return true;
+        } catch (error) {
+            console.error('Erreur dans sendPostRequest:', error);
+            alert(`Erreur: ${error.message}`);
+            return false;
+        }
+    }     
+       
         // Gestion des actions sans actualisation
         async function submitQuestion(event) {
             event.preventDefault();
@@ -396,6 +585,160 @@
             await sendPostRequest('{{ url_for("tnt.kick_video_queue", session_id=session.id) }}', {});
         }
 
+
+
+        async function createQuiz() {
+            console.log('Création quiz');
+            const question = document.getElementById('quiz-question').value;
+            const options = [
+                document.getElementById('option-0').value,
+                document.getElementById('option-1').value,
+                document.getElementById('option-2').value,
+                document.getElementById('option-3').value
+            ];
+            const correct_option = parseInt(document.getElementById('correct-option').value);
+            const duration = parseInt(document.getElementById('quiz-duration').value);
+            if (!question || options.some(opt => !opt) || isNaN(correct_option) || ![0,1,2,3].includes(correct_option) || isNaN(duration) || duration < 10) {
+                alert('Veuillez remplir tous les champs correctement.');
+                return;
+            }
+            const success = await sendPostRequest('{{ url_for("tnt.create_quiz", session_id=session.id) }}', {
+                question,
+                options,
+                correct_option,
+                duration
+            });
+            if (success) {
+                console.log('Quiz créé avec succès');
+                document.getElementById('create-quiz-form').reset();
+                document.getElementById('quiz-duration').value = 30;
+                bootstrap.Modal.getInstance(document.getElementById('createQuizModal')).hide();
+                window.location.reload();
+            }
+        }
+
+        async function activateQuiz(quizId) {
+            console.log('Activation quiz:', quizId);
+            const success = await sendPostRequest(`{{ url_for("tnt.enable_quiz", session_id=session.id) }}?quiz_id=${quizId}`, {});
+            if (success) {
+                console.log('Quiz activé avec succès');
+            }
+        }
+
+        async function deleteQuiz(quizId) {
+            console.log('Suppression quiz:', quizId);
+            if (confirm('Voulez-vous vraiment supprimer ce quiz ?')) {
+                const success = await sendPostRequest(`{{ url_for("tnt.delete_quiz", session_id=session.id, quiz_id=0) }}`.replace('0', quizId), {});
+                if (success) {
+                    console.log('Quiz supprimé avec succès');
+                    window.location.reload();
+                }
+            }
+        }
+
+        async function disableQuiz() {
+            console.log('Désactivation quiz');
+            const success = await sendPostRequest('{{ url_for("tnt.disable_quiz", session_id=session.id) }}', {});
+            if (success) {
+                console.log('Quiz désactivé avec succès');
+                document.getElementById('disable-quiz').style.display = 'none';
+            }
+        }
+
+        function displayQuiz(data) {
+            console.log('Affichage quiz:', data);
+            const quizContent = document.getElementById('quiz-content');
+            quizContent.style.display = 'block';
+            document.getElementById('quiz-results').style.display = 'none';
+            quizContent.innerHTML = `
+                <div class="quiz-card card shadow-sm glass-effect mb-3" style="background-color: #333; color: #fff; border: 1px solid #555;">
+                    <div class="card-body">
+                        <h5 style="color: #fff;">${data.question}</h5>
+                        <div id="quiz-timer" class="mb-3" style="color: #0f0;">Temps restant : ${data.duration}s</div>
+                        <div id="quiz-options">
+                            ${data.options.map((option, index) => `
+                                <button class="quiz-option btn w-100 mb-2" style="background-color: #007bff; color: #fff; border: 1px solid #0056b3;" data-option="${index}">${option}</button>
+                            `).join('')}
+                        </div>
+                    </div>
+                </div>
+            `;
+            const isDoctor = '{{ user.role }}' === 'doctor';
+            console.log('Rôle utilisateur:', '{{ user.role }}', 'isDoctor:', isDoctor);
+            if (!isDoctor) {
+                startTimer(data.expires_at, data.duration, data);
+                document.querySelectorAll('.quiz-option').forEach(button => {
+                    button.disabled = false;
+                    button.addEventListener('click', async () => {
+                        console.log('Clic sur option:', button.dataset.option);
+                        document.querySelectorAll('.quiz-option').forEach(btn => btn.disabled = true);
+                        const selectedOption = parseInt(button.dataset.option);
+                        const quizAnswerUrl = `/api/tnt/live-session/{{ session.id }}/quiz/${data.quiz_id}/answer`;
+                        console.log('Envoi réponse quiz:', { quiz_id: data.quiz_id, selected_option: selectedOption });
+                        const success = await sendPostRequest(quizAnswerUrl, {
+                            selected_option: selectedOption
+                        });
+                        if (success) {
+                            showQuizResult(data);
+                        } else {
+                            document.querySelectorAll('.quiz-option').forEach(btn => btn.disabled = false);
+                        }
+                    }, { once: true });
+                });
+            } else {
+                document.querySelectorAll('.quiz-option').forEach(button => button.disabled = true);
+            }
+        }
+
+        function startTimer(expiresAt, duration, quizData) {
+            console.log('Démarrage timer, expiresAt:', expiresAt, 'duration:', duration);
+            const timerDiv = document.getElementById('quiz-timer');
+            if (!timerDiv) {
+                console.error('quiz-timer introuvable');
+                showQuizResult(quizData);
+                return;
+            }
+            const endTime = new Date(expiresAt).getTime();
+            if (isNaN(endTime) || endTime <= Date.now()) {
+                console.error('expiresAt invalide ou déjà expiré:', expiresAt);
+                showQuizResult(quizData);
+                return;
+            }
+            let secondsLeft = Math.min(duration, Math.floor((endTime - Date.now()) / 1000));
+            timerDiv.textContent = `Temps restant : ${secondsLeft}s`;
+            const interval = setInterval(() => {
+                secondsLeft = Math.max(0, secondsLeft - 1);
+                console.log('Timer tick:', secondsLeft);
+                timerDiv.textContent = `Temps restant : ${secondsLeft}s`;
+                if (secondsLeft <= 0) {
+                    clearInterval(interval);
+                    console.log('Timer expiré');
+                    document.querySelectorAll('.quiz-option').forEach(button => button.disabled = true);
+                    showQuizResult(quizData);
+                }
+            }, 1000);
+        }
+
+        function showQuizResult(data) {
+            console.log('Affichage résultat quiz:', data);
+            const quizContent = document.getElementById('quiz-content');
+            quizContent.style.display = 'block';
+            document.getElementById('quiz-results').style.display = 'none';
+            quizContent.innerHTML = `
+                <div class="quiz-card card shadow-sm glass-effect mb-3" style="background-color: #333; color: #fff; border: 1px solid #555;">
+                    <div class="card-body">
+                        <h5 style="color: #fff;">${data.question}</h5>
+                        <div id="quiz-options">
+                            ${data.options.map((option, index) => `
+                                <button class="quiz-option btn w-100 mb-2" style="background-color: ${index === data.correct_option ? '#28a745' : '#6c757d'}; color: #fff; border: 1px solid ${index === data.correct_option ? '#218838' : '#5a6268'};" disabled>${option}</button>
+                            `).join('')}
+                        </div>
+                        <p class="text-success mt-3">Bonne réponse : ${data.options[data.correct_option]}</p>
+                    </div>
+                </div>
+            `;
+        }
+
         // Attacher les événements aux boutons
         const submitQuestionButton = document.getElementById('submit-question');
         if (submitQuestionButton) submitQuestionButton.addEventListener('click', submitQuestion);
@@ -408,6 +751,7 @@
             document.getElementById('disable-questions').addEventListener('click', disableQuestions);
             document.getElementById('next-queue').addEventListener('click', nextQueue);
             document.getElementById('kick-queue').addEventListener('click', kickQueue);
+            document.getElementById('create-quiz-form').addEventListener('submit', createQuiz);
         {% endif %}
 
         {% if is_broadcaster %}
