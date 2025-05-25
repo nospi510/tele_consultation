@@ -77,6 +77,30 @@ function initSocketIO(token) {
         }
     });
 
+        socket.on('quiz_enabled', (data) => {
+        console.log('Événement quiz_enabled reçu:', data);
+        if (data.session_id == currentSessionId) {
+            console.log('Activation quiz pour session:', data.session_id);
+            displayQuiz(data);
+        } else {
+            console.log('Événement quiz ignoré, session_id ne correspond pas:', data.session_id, currentSessionId);
+        }
+    });
+
+    socket.on('quiz_disabled', (data) => {
+        console.log('Événement quiz_disabled reçu:', data);
+        if (data.session_id == currentSessionId) {
+            console.log('Désactivation quiz pour session:', data.session_id);
+            document.getElementById('quiz-content').style.display = 'none';
+            document.getElementById('quiz-results').style.display = 'none';
+            document.getElementById('quiz-status').innerHTML = '<p class="text-muted">Le quiz est désactivé.</p>';
+        } else {
+            console.log('Événement quiz ignoré, session_id ne correspond pas:', data.session_id, currentSessionId);
+        }
+    });
+
+    
+
     socket.on('disconnect', () => {
         console.log('Déconnecté de SocketIO');
     });
@@ -664,6 +688,129 @@ function updateQuestionWithAnswer(data) {
     }
 }
 
+function displayQuiz(data) {
+    console.log('Affichage quiz HbbTV:', data);
+    const quizContent = document.getElementById('quiz-content');
+    quizContent.style.display = 'block';
+    document.getElementById('quiz-results').style.display = 'none';
+    quizContent.innerHTML = `
+        <div class="quiz-card card shadow-sm glass-effect mb-3" style="background-color: #333; color: #fff; border: 1px solid #555;">
+            <div class="card-body">
+                <h5 style="color: #fff;">${data.question}</h5>
+                <div id="quiz-timer" class="mb-3" style="color: #0f0;">Temps restant : ${data.duration}s</div>
+                <div id="quiz-options">
+                    ${data.options.map((option, index) => `
+                        <button class="quiz-option btn w-100 mb-2" style="background-color: #007bff; color: #fff; border: 1px solid #0056b3;" data-option="${index}" tabindex="0">${option}</button>
+                    `).join('')}
+                </div>
+            </div>
+        </div>
+    `;
+    document.getElementById('quiz-status').innerHTML = '<p class="text-success">Le quiz est activé.</p>';
+    startTimer(data.expires_at, data.duration, data);
+    initQuizNavigation(data);
+}
+
+function startTimer(expiresAt, duration, quizData) {
+    console.log('Démarrage timer HbbTV, expiresAt:', expiresAt, 'duration:', duration);
+    const timerDiv = document.getElementById('quiz-timer');
+    if (!timerDiv) {
+        console.error('quiz-timer introuvable');
+        showQuizResult(quizData);
+        return;
+    }
+    const endTime = new Date(expiresAt).getTime();
+    if (isNaN(endTime) || endTime <= Date.now()) {
+        console.error('expiresAt invalide ou déjà expiré:', expiresAt);
+        showQuizResult(quizData);
+        return;
+    }
+    let secondsLeft = Math.min(duration, Math.floor((endTime - Date.now()) / 1000));
+    timerDiv.textContent = `Temps restant : ${secondsLeft}s`;
+    const interval = setInterval(() => {
+        secondsLeft = Math.max(0, secondsLeft - 1);
+        console.log('Timer tick:', secondsLeft);
+        timerDiv.textContent = `Temps restant : ${secondsLeft}s`;
+        if (secondsLeft <= 0) {
+            clearInterval(interval);
+            console.log('Timer expiré');
+            document.querySelectorAll('.quiz-option').forEach(button => button.disabled = true);
+            showQuizResult(quizData);
+        }
+    }, 1000);
+}
+
+function showQuizResult(data) {
+    console.log('Affichage résultat quiz HbbTV:', data);
+    const quizContent = document.getElementById('quiz-content');
+    quizContent.style.display = 'block';
+    document.getElementById('quiz-results').style.display = 'none';
+    quizContent.innerHTML = `
+        <div class="quiz-card card shadow-sm glass-effect mb-3" style="background-color: #333; color: #fff; border: 1px solid #555;">
+            <div class="card-body">
+                <h5 style="color: #fff;">${data.question}</h5>
+                <div id="quiz-options">
+                    ${data.options.map((option, index) => `
+                        <button class="quiz-option btn w-100 mb-2" style="background-color: ${index === data.correct_option ? '#28a745' : '#6c757d'}; color: #fff; border: 1px solid ${index === data.correct_option ? '#218838' : '#5a6268'};" disabled>${option}</button>
+                    `).join('')}
+                </div>
+                <p class="text-success mt-3">Bonne réponse : ${data.options[data.correct_option]}</p>
+            </div>
+        </div>
+    `;
+}
+
+function submitQuizAnswer(quizId, selectedOption) {
+    console.log('Envoi réponse quiz HbbTV:', { quiz_id: quizId, selected_option: selectedOption });
+    const token = localStorage.getItem('token');
+    if (!token) {
+        console.error('Token non trouvé');
+        alert('Erreur : Vous devez être connecté.');
+        return;
+    }
+    fetch(`http://localhost:5001/api/tnt/live-session/${currentSessionId}/quiz/${quizId}/answer`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ selected_option: selectedOption })
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`Erreur HTTP ${response.status}: Échec envoi réponse`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        console.log('Réponse quiz envoyée:', data);
+    })
+    .catch(error => {
+        console.error('Erreur envoi réponse quiz:', error);
+        alert(`Erreur : ${error.message}`);
+        document.querySelectorAll('.quiz-option').forEach(button => button.disabled = false);
+    });
+}
+
+function initQuizNavigation(quizData) {
+    console.log('Initialisation navigation quiz HbbTV');
+    const buttons = document.querySelectorAll('.quiz-option');
+    buttons.forEach((button, index) => {
+        button.disabled = false;
+        button.addEventListener('click', () => {
+            console.log('Clic sur option:', button.dataset.option);
+            buttons.forEach(btn => btn.disabled = true);
+            const selectedOption = parseInt(button.dataset.option);
+            submitQuizAnswer(quizData.quiz_id, selectedOption);
+            showQuizResult(quizData);
+        }, { once: true });
+    });
+    if (buttons.length > 0) {
+        buttons[0].focus();
+    }
+}
+
+
 function hideAllRightPanels() {
     document.getElementById("welcome-message").style.display = "none";
     document.getElementById("login-form").style.display = "none";
@@ -675,6 +822,7 @@ function hideAllRightPanels() {
     document.getElementById("channel-selection").style.display = "none";
     document.getElementById("live-session").style.display = "none";
 }
+
 
 function initNavigation() {
     const focusable = Array.from(document.querySelectorAll("button, input, textarea, select, .list-group-item"));

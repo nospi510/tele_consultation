@@ -3,31 +3,20 @@
 <head>
     <meta http-equiv="Content-Type" content="application/vnd.hbbtv.xhtml+xml; charset=utf-8" />
     <title>Dr Santé - Téléconsultation</title>
-    <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
-    <!-- Bootstrap Icons -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
-    <!-- Custom CSS -->
     <link rel="stylesheet" href="assets/styles.css" />
-    <!-- hls.js pour les flux M3U -->
-    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
-    <!-- SocketIO pour la synchronisation en temps réel -->
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@1.4.12"></script>
     <script src="https://cdn.jsdelivr.net/npm/socket.io-client@4.5.4/dist/socket.io.min.js"></script>
-    <!-- Bootstrap JS (pour les composants interactifs comme modals) -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
-    <!-- Custom JS -->
     <script type="text/javascript" src="scripts/main.js"></script>
 </head>
 <body onload="initApp();">
-    <!-- Gestionnaire HbbTV -->
     <div>
         <object type="application/oipfApplicationManager" id="applicationManager"></object>
     </div>
-
-    <!-- Conteneur principal -->
     <div class="container-fluid" id="app-container">
         <div class="row g-3">
-            <!-- Colonne gauche : Menu et Infos utilisateur -->
             <div class="col-md-3 col-12">
                 <div id="left-panel">
                     <div id="main-menu" class="card shadow-sm glass-effect">
@@ -74,8 +63,6 @@
                     </div>
                 </div>
             </div>
-
-            <!-- Colonne centrale : Vidéo -->
             <div class="col-md-6 col-12">
                 <div id="video-panel" class="card shadow-sm glass-effect">
                     <div class="card-body">
@@ -86,12 +73,9 @@
                     </div>
                 </div>
             </div>
-
-            <!-- Colonne droite : Contenu dynamique -->
             <div class="col-md-3 col-12">
                 <div id="right-panel" class="card shadow-sm glass-effect">
                     <div class="card-body">
-                        <!-- Formulaire de connexion -->
                         <div id="login-form" class="fade-in" style="display:none;">
                             <h2 class="card-title"><i class="bi bi-lock me-2"></i>Connexion</h2>
                             <div class="mb-3">
@@ -109,8 +93,6 @@
                                 <i class="bi bi-arrow-left me-2"></i>Retour
                             </button>
                         </div>
-
-                        <!-- Formulaire de consultation -->
                         <div id="consultation-form" class="fade-in" style="display:none;">
                             <h2 class="card-title"><i class="bi bi-clipboard-check me-2"></i>Nouvelle Consultation</h2>
                             <div class="mb-3">
@@ -123,8 +105,6 @@
                                 <i class="bi bi-arrow-left me-2"></i>Retour
                             </button>
                         </div>
-
-                        <!-- Historique des consultations -->
                         <div id="history-view" class="fade-in" style="display:none;">
                             <h2 class="card-title"><i class="bi bi-journal-text me-2"></i>Mes Consultations</h2>
                             <div id="history-content" class="mb-3"></div>
@@ -132,8 +112,6 @@
                                 <i class="bi bi-arrow-left me-2"></i>Retour
                             </button>
                         </div>
-
-                        <!-- Conseils de santé -->
                         <div id="tips-view" class="fade-in" style="display:none;">
                             <h2 class="card-title"><i class="bi bi-lightbulb me-2"></i>Conseils Santé</h2>
                             <p id="tips-content" class="mb-3"></p>
@@ -141,8 +119,6 @@
                                 <i class="bi bi-arrow-left me-2"></i>Retour
                             </button>
                         </div>
-
-                        <!-- Formulaire de planification de rendez-vous -->
                         <div id="appointment-form" class="fade-in" style="display:none;">
                             <h2 class="card-title"><i class="bi bi-calendar-plus me-2"></i>Planifier un Rendez-vous</h2>
                             <div class="mb-3">
@@ -160,8 +136,6 @@
                                 <i class="bi bi-arrow-left me-2"></i>Retour
                             </button>
                         </div>
-
-                        <!-- Liste des rendez-vous à venir -->
                         <div id="upcoming-appointments" class="fade-in" style="display:none;">
                             <h2 class="card-title"><i class="bi bi-calendar-check me-2"></i>Mes RDV à venir</h2>
                             <div id="appointments-content" class="mb-3"></div>
@@ -169,8 +143,6 @@
                                 <i class="bi bi-arrow-left me-2"></i>Retour
                             </button>
                         </div>
-
-                        <!-- Sessions live -->
                         <div id="live-session" class="fade-in" style="display:none;">
                             <h2 class="card-title"><i class="bi bi-camera-video me-2"></i>Session en Direct</h2>
                             <div class="mb-3">
@@ -192,12 +164,19 @@
                                 <p class="text-muted">Les questions sont désactivées.</p>
                             </div>
                             <div id="questions-list" class="mb-3"></div>
+
+
+                            <div id="quiz-status" class="mb-3">
+                                <p class="text-muted">Le quiz est désactivé.</p>
+                            </div>
+                            <div id="quiz-content" class="mb-3" style="display:none;"></div>
+                            <div id="quiz-results" class="mb-3" style="display:none;"></div>
+
+                            
                             <button class="btn btn-secondary w-100" onclick="hideLiveSession()" tabindex="0">
                                 <i class="bi bi-arrow-left me-2"></i>Retour
                             </button>
                         </div>
-
-                        <!-- Liste des chaînes -->
                         <div id="channel-selection" class="fade-in" style="display:none;">
                             <h2 class="card-title"><i class="bi bi-tv me-2"></i>Liste des Chaînes</h2>
                             <ul id="channel-list" class="list-group mb-3"></ul>
@@ -205,8 +184,6 @@
                                 <i class="bi bi-arrow-left me-2"></i>Retour
                             </button>
                         </div>
-
-                        <!-- Message de bienvenue -->
                         <div id="welcome-message" class="fade-in text-center">
                             <h2 class="card-title"><i class="bi bi-house-door me-2"></i>Bienvenue sur Dr Santé</h2>
                             <p>Connectez-vous pour accéder à vos services de téléconsultation.</p>
