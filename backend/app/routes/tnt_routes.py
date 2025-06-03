@@ -913,47 +913,37 @@ def create_quiz(session_id):
 def enable_quiz(session_id):
     try:
         user_id = get_jwt_identity()
-        logging.debug(f"JWT identity: {user_id}")
-        if not user_id:
-            logging.error("Aucune identité utilisateur dans le JWT")
-            return jsonify({'error': 'Identité utilisateur invalide'}), 401
+        quiz_id = request.args.get('quiz_id', type=int)
+        if not quiz_id:
+            return jsonify({'error': 'Quiz ID manquant'}), 400
         user = User.query.get(user_id)
-        if not user:
-            logging.error(f"Utilisateur non trouvé pour user_id: {user_id}")
-            return jsonify({'error': 'Utilisateur non trouvé'}), 404
-        if user.role != 'doctor':
-            logging.warning(f"Tentative non autorisée d'activer le quiz par {user.email}")
+        if not user or user.role != 'doctor':
             return jsonify({'error': 'Accès non autorisé'}), 403
         session = LiveSession.query.get(session_id)
         if not session:
-            logging.error(f"Session non trouvée: session_id={session_id}")
             return jsonify({'error': 'Session non trouvée'}), 404
-        session.quiz_enabled = True
-        quiz_id = request.args.get('quiz_id', type=int)
-        if not quiz_id:
-            logging.error("Aucun quiz_id fourni")
-            return jsonify({'error': 'Quiz ID requis'}), 400
         quiz = LiveQuiz.query.get(quiz_id)
         if not quiz or quiz.session_id != session_id:
-            logging.error(f"Quiz non trouvé ou invalide: quiz_id={quiz_id}, session_id={session_id}")
             return jsonify({'error': 'Quiz non trouvé'}), 404
-        duration = quiz.duration
-        expires_at = datetime.utcnow() + timedelta(seconds=duration)
+        expires_at = datetime.utcnow() + timedelta(seconds=quiz.duration)
         quiz.expires_at = expires_at
         db.session.commit()
-        socketio.emit('quiz_enabled', {
+        quiz_data = {
             'quiz_id': quiz.id,
             'session_id': session_id,
             'question': quiz.question,
             'options': quiz.options,
-            'duration': duration,
-            'expires_at': expires_at.isoformat()
-        }, room=str(session_id), namespace='/live')
-        logging.info(f"Quiz {quiz_id} activé pour la session {session_id} par {user.email}")
+            'duration': quiz.duration,
+            'expires_at': expires_at.isoformat(),
+            'correct_option': quiz.correct_option
+        }
+        logging.info(f'Émission quiz_enabled: {quiz_data}')
+        socketio.emit('quiz_enabled', quiz_data, room=str(session_id), namespace='/live')
         return jsonify({'message': 'Quiz activé'}), 200
     except Exception as e:
-        logging.error(f"Erreur dans enable_quiz (session_id={session_id}): {str(e)}", exc_info=True)
-        return jsonify({'error': 'Erreur serveur interne'}), 500
+        logging.error(f'Erreur enable_quiz: {str(e)}', exc_info=True)
+        return jsonify({'error': 'Erreur serveur'}), 500
+
 
 @tnt_bp.route('/live-session/<int:session_id>/quiz/disable', methods=['POST'])
 @jwt_required()
@@ -1016,6 +1006,37 @@ def get_quizzes(session_id):
     except Exception as e:
         logging.error(f"Erreur dans get_quizzes (session_id={session_id}): {str(e)}", exc_info=True)
         return jsonify({'error': str(e)}), 500
+
+@tnt_bp.route('/live-session/<int:session_id>/quiz/<int:quiz_id>/answer', methods=['POST'])
+@jwt_required()
+def answer_quiz(session_id, quiz_id):
+    try:
+        user_id = get_jwt_identity()
+        data = request.get_json()
+        selected_option = data.get('selected_option')
+        if selected_option is None or not isinstance(selected_option, int):
+            return jsonify({'error': 'Option sélectionnée invalide'}), 400
+        session = LiveSession.query.get(session_id)
+        if not session:
+            return jsonify({'error': 'Session non trouvée'}), 404
+        quiz = LiveQuiz.query.get(quiz_id)
+        if not quiz or quiz.session_id != session_id:
+            return jsonify({'error': 'Quiz non trouvé'}), 404
+        if quiz.expires_at < datetime.utcnow():
+            return jsonify({'error': 'Quiz expiré'}), 400
+        
+        answer = QuizAnswer(
+            quiz_id=quiz_id,
+            user_id=user_id,
+            selected_option=selected_option,
+            submitted_at=datetime.utcnow()
+        )
+        db.session.add(answer)
+        db.session.commit()
+        return jsonify({'message': 'Réponse enregistrée'}), 200
+    except Exception as e:
+        logging.error(f'Erreur answer_quiz: {str(e)}', exc_info=True)
+        return jsonify({'error': 'Erreur serveur'}), 500
 
 @tnt_bp.route('/live-session/<int:session_id>/quiz/delete/<int:quiz_id>', methods=['POST'])
 @jwt_required()
