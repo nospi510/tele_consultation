@@ -324,6 +324,11 @@ body {
     background: #138496;
 }
 
+/* Labels du formulaire de création de quiz */
+#createQuizModal .form-label {
+    color: #1e3a8a; /* Bleu nuit */
+  }
+
 /* Animation fadeIn */
 @keyframes fadeIn {
     from { opacity: 0; transform: translateY(10px); }
