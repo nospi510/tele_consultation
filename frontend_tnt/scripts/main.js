@@ -77,8 +77,8 @@ function initSocketIO(token) {
         }
     });
 
-        socket.on('quiz_enabled', (data) => {
-        console.log('Événement quiz_enabled reçu:', data);
+    socket.on('quiz_enabled', (data) => {
+        console.log('Événement quiz_enabled reçu:', JSON.stringify(data, null, 2));
         if (data.session_id == currentSessionId) {
             console.log('Activation quiz pour session:', data.session_id);
             displayQuiz(data);
@@ -693,14 +693,19 @@ function displayQuiz(data) {
     const quizContent = document.getElementById('quiz-content');
     quizContent.style.display = 'block';
     document.getElementById('quiz-results').style.display = 'none';
+    if (!data.options || !Array.isArray(data.options) || data.options.length < 4) {
+        console.error('Options invalides:', data.options);
+        quizContent.innerHTML = '<p class="text-danger">Erreur : Options du quiz invalides.</p>';
+        return;
+    }
     quizContent.innerHTML = `
         <div class="quiz-card card shadow-sm glass-effect mb-3" style="background-color: #333; color: #fff; border: 1px solid #555;">
             <div class="card-body">
-                <h5 style="color: #fff;">${data.question}</h5>
-                <div id="quiz-timer" class="mb-3" style="color: #0f0;">Temps restant : ${data.duration}s</div>
+                <h5 style="color: #fff;">${data.question || 'Question manquante'}</h5>
+                <div id="quiz-timer" class="mb-3" style="color: #0f0;">Temps restant : ${data.duration || 30}s</div>
                 <div id="quiz-options">
                     ${data.options.map((option, index) => `
-                        <button class="quiz-option btn w-100 mb-2" style="background-color: #007bff; color: #fff; border: 1px solid #0056b3;" data-option="${index}" tabindex="0">${option}</button>
+                        <button class="quiz-option btn w-100 mb-2" style="background-color: #007bff; color: #fff; border: 1px solid #0056b3;" data-option="${index}" tabindex="0">${option || 'Option vide'}</button>
                     `).join('')}
                 </div>
             </div>
@@ -719,13 +724,17 @@ function startTimer(expiresAt, duration, quizData) {
         showQuizResult(quizData);
         return;
     }
-    const endTime = new Date(expiresAt).getTime();
-    if (isNaN(endTime) || endTime <= Date.now()) {
-        console.error('expiresAt invalide ou déjà expiré:', expiresAt);
-        showQuizResult(quizData);
-        return;
+    let secondsLeft = duration || 30; // Secours si duration manquant
+    if (expiresAt) {
+        const endTime = new Date(expiresAt).getTime();
+        if (!isNaN(endTime) && endTime > Date.now()) {
+            secondsLeft = Math.min(secondsLeft, Math.floor((endTime - Date.now()) / 1000));
+        } else {
+            console.error('expiresAt invalide ou déjà expiré:', expiresAt);
+        }
+    } else {
+        console.warn('expiresAt manquant, utilisation duration:', secondsLeft);
     }
-    let secondsLeft = Math.min(duration, Math.floor((endTime - Date.now()) / 1000));
     timerDiv.textContent = `Temps restant : ${secondsLeft}s`;
     const interval = setInterval(() => {
         secondsLeft = Math.max(0, secondsLeft - 1);
@@ -740,35 +749,60 @@ function startTimer(expiresAt, duration, quizData) {
     }, 1000);
 }
 
-function showQuizResult(data) {
-    console.log('Affichage résultat quiz HbbTV:', data);
+function showQuizResult(data, selectedOption = null) {
+    console.log('Affichage résultat quiz HbbTV:', data, 'selectedOption:', selectedOption);
     const quizContent = document.getElementById('quiz-content');
     quizContent.style.display = 'block';
     document.getElementById('quiz-results').style.display = 'none';
+    if (!data.options || !Array.isArray(data.options) || typeof data.correct_option !== 'number') {
+        console.error('Données quiz invalides:', data);
+        quizContent.innerHTML = '<p class="text-danger">Erreur : Résultats du quiz invalides.</p>';
+        return;
+    }
     quizContent.innerHTML = `
         <div class="quiz-card card shadow-sm glass-effect mb-3" style="background-color: #333; color: #fff; border: 1px solid #555;">
             <div class="card-body">
-                <h5 style="color: #fff;">${data.question}</h5>
+                <h5 style="color: #fff;">${data.question || 'Question manquante'}</h5>
                 <div id="quiz-options">
-                    ${data.options.map((option, index) => `
-                        <button class="quiz-option btn w-100 mb-2" style="background-color: ${index === data.correct_option ? '#28a745' : '#6c757d'}; color: #fff; border: 1px solid ${index === data.correct_option ? '#218838' : '#5a6268'};" disabled>${option}</button>
-                    `).join('')}
+                    ${data.options.map((option, index) => {
+                        let bgColor = '#6c757d'; // Neutre
+                        let borderColor = '#5a6268';
+                        if (index === data.correct_option) {
+                            bgColor = '#28a745'; // Vert pour bonne réponse
+                            borderColor = '#218838';
+                        } else if (selectedOption !== null && index === selectedOption && index !== data.correct_option) {
+                            bgColor = '#dc3545'; // Rouge pour mauvaise réponse choisie
+                            borderColor = '#b02a37';
+                        }
+                        return `
+                            <button class="quiz-option btn w-100 mb-2" style="background-color: ${bgColor}; color: #fff; border: 1px solid ${borderColor};" disabled>${option || 'Option vide'}</button>
+                        `;
+                    }).join('')}
                 </div>
-                <p class="text-success mt-3">Bonne réponse : ${data.options[data.correct_option]}</p>
+                <p class="text-success mt-3">Bonne réponse : ${data.options[data.correct_option] || 'Non définie'}</p>
+                ${selectedOption !== null && selectedOption !== data.correct_option ? `<p class="text-danger mt-2">Votre réponse : ${data.options[selectedOption] || 'Non définie'}</p>` : ''}
             </div>
         </div>
     `;
 }
 
+
 function submitQuizAnswer(quizId, selectedOption) {
-    console.log('Envoi réponse quiz HbbTV:', { quiz_id: quizId, selected_option: selectedOption });
+    console.log('Envoi réponse quiz HbbTV:', { quiz_id: quizId, selected_option: selectedOption, session_id: currentSessionId });
     const token = localStorage.getItem('token');
     if (!token) {
         console.error('Token non trouvé');
         alert('Erreur : Vous devez être connecté.');
         return;
     }
-    fetch(`http://localhost:5001/api/tnt/live-session/${currentSessionId}/quiz/${quizId}/answer`, {
+    if (!quizId || !currentSessionId) {
+        console.error('quizId ou sessionId manquant:', { quizId, currentSessionId });
+        alert('Erreur : Quiz ou session non valide.');
+        return;
+    }
+    const url = `http://localhost:5001/api/tnt/live-session/${currentSessionId}/quiz/${quizId}/answer`;
+    console.log('URL requête:', url);
+    fetch(url, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -777,8 +811,9 @@ function submitQuizAnswer(quizId, selectedOption) {
         body: JSON.stringify({ selected_option: selectedOption })
     })
     .then(response => {
+        console.log('Réponse API:', response.status, response.statusText);
         if (!response.ok) {
-            throw new Error(`Erreur HTTP ${response.status}: Échec envoi réponse`);
+            throw new Error(`Erreur HTTP ${response.status}: ${response.statusText}`);
         }
         return response.json();
     })
@@ -802,7 +837,7 @@ function initQuizNavigation(quizData) {
             buttons.forEach(btn => btn.disabled = true);
             const selectedOption = parseInt(button.dataset.option);
             submitQuizAnswer(quizData.quiz_id, selectedOption);
-            showQuizResult(quizData);
+            showQuizResult(quizData, selectedOption); // Passe selectedOption
         }, { once: true });
     });
     if (buttons.length > 0) {
