@@ -1,4 +1,3 @@
-````markdown
 # 🩺 Projet Téléconsultation – Backend & Frontend (TNT + Mobile)
 
 Ce projet comprend :
@@ -125,3 +124,8 @@ ionic serve
 ```
 
 ---
+
+## ✅ Remarques de sécurité
+
+* Pensez à **ne jamais versionner** le fichier `.env` (ajoutez-le à `.gitignore`)
+* Fournissez un fichier `.env.example` pour permettre aux autres développeurs de configurer rapidement leur
