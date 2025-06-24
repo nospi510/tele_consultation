@@ -1,3 +1,4 @@
+
 # 🩺 Projet Téléconsultation – Backend & Frontend (TNT + Mobile)
 
 Ce projet comprend :
@@ -59,6 +60,13 @@ Remplissez ensuite le fichier `.env` avec vos informations personnelles (base de
 pip install -r requirements.txt
 ```
 
+### Initialisé la migration
+
+```bash
+flask db init
+flask db migrate
+flask db upgrade
+```
 ###  Lancement du serveur Flask
 
 ```bash
