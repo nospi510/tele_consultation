@@ -8,7 +8,7 @@ Ce projet comprend :
 
 ---
 
-## ⚙️ Installation des dépendances système
+##  Installation des dépendances système
 
 ```bash
 sudo apt install python3 python3-pip python3-venv mariadb-server mariadb-client -y
@@ -16,7 +16,7 @@ sudo apt install python3 python3-pip python3-venv mariadb-server mariadb-client 
 
 ---
 
-## 🛢️ Configuration de la base de données
+##  Configuration de la base de données
 
 ```bash
 mysql -u root -p
@@ -30,20 +30,20 @@ CREATE DATABASE teleconsultation;
 
 ---
 
-## 🧠 Backend – API Flask
+##  Backend – API Flask
 
 ```bash
 cd backend
 ```
 
-### 🔹 Création d’un environnement virtuel
+###  Création d’un environnement virtuel
 
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
 ```
 
-### 🔹 Configuration des variables d’environnement
+###  Configuration des variables d’environnement
 
 Copiez le fichier `.env.example` :
 
@@ -53,13 +53,13 @@ cp .env.example .env
 
 Remplissez ensuite le fichier `.env` avec vos informations personnelles (base de données, clé secrète, etc.).
 
-### 🔹 Installation des dépendances Python
+###  Installation des dépendances Python
 
 ```bash
 pip install -r requirements.txt
 ```
 
-### 🚀 Lancement du serveur Flask
+###  Lancement du serveur Flask
 
 ```bash
 python run.py
@@ -67,23 +67,35 @@ python run.py
 
 ---
 
-## 📺 Frontend TNT – Application HbbTV
+##  Frontend TNT – Application HbbTV
+
+Il est necéssaire d'avoir un serveur web pour lancer le frontent TNT. 
+
+Exemple : Installer http-server globalement :
+
+```bash
+sudo npm install -g http-server
+````
 
 ```bash
 cd frontend_tnt
+http-server -p 8081 --mimetypes .types
 ```
+
+
+
 
 Lancer via un navigateur :
 
 ```
-http://localhost/frontend_tnt
+http://localhost:8081
 ```
 
 ---
 
-## 📱 Frontend Mobile – Ionic Angular
+##  Frontend Mobile – Ionic Angular
 
-### 🔹 Lancer le projet mobile
+###  Lancer le projet mobile
 
 ```bash
 cd frontend
@@ -95,14 +107,13 @@ Si Ionic CLI n'est pas installé globalement :
 npm install -g @ionic/cli
 ```
 
-Créer le projet :
+Acceder au dossier :
 
 ```bash
-ionic start dr-sante-mobile blank --type=angular --capacitor
 cd dr-sante-mobile
 ```
 
-### 🔹 Installer les dépendances nécessaires
+###  Installer les dépendances nécessaires
 
 ```bash
 npm install axios @ionic/angular @capacitor/core @capacitor/android @capacitor/ios
@@ -110,22 +121,15 @@ npm install socket.io-client simple-peer @types/simple-peer --save
 npm install hls.js@1.4.10
 ```
 
-### 🔹 Ajouter les plateformes Capacitor
+###  Ajouter les plateformes Capacitor
 
 ```bash
 ionic capacitor add android
 ionic capacitor add ios
 ```
 
-### 👀 Lancer l'application dans le navigateur
+###  Lancer l'application dans le navigateur
 
 ```bash
 ionic serve
 ```
-
----
-
-## ✅ Remarques de sécurité
-
-* Pensez à **ne jamais versionner** le fichier `.env` (ajoutez-le à `.gitignore`)
-* Fournissez un fichier `.env.example` pour permettre aux autres développeurs de configurer rapidement leur
