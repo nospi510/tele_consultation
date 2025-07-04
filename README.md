@@ -1,7 +1,3 @@
-<<<<<<< HEAD
-=======
-
->>>>>>> 4f7261f4d0bc16ea5f8192cabc679056c74d6ffd
 # 🩺 Projet Téléconsultation – Backend & Frontend (TNT + Mobile)
 
 Ce projet comprend :
